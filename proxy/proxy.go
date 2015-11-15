@@ -8,37 +8,21 @@ import (
 	"time"
 )
 
-func acceptWorker(ln net.Listener) (newConn <-chan net.Conn, quit chan<- struct{}, stop <-chan struct{}) {
-	nc, q, s := make(chan net.Conn), make(chan struct{}), make(chan struct{})
-	go func() {
-		defer close(s)
-		for yay := true; yay; {
-			conn, err := ln.Accept()
-			if err != nil {
-				select {
-				case <-q:
-					yay = false
-				default:
-					log.Warning(err) // TODO: fix this?
-				}
-			} else {
-				nc <- conn
-			}
-		}
-	}()
-	newConn, quit, stop = nc, q, s
-	return
-}
-
-type ConnOptiions struct {
+// ConnOptions defines how the proxy should behave
+type ConnOptions struct {
 	Net          string
 	From         string
 	To           []string
+	Service      string
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 }
 
-func To(c ctx.Context, opts *ConnOptiions) {
+// To takes a Context and ConnOptiions and begin listening for request to
+// proxy.
+// Review https://godoc.org/golang.org/x/net/context for understanding the
+// control flow.
+func To(c ctx.Context, opts *ConnOptions) {
 	ln, err := net.Listen(opts.Net, opts.From)
 	if err != nil {
 		log.Warning(err)
@@ -61,70 +45,4 @@ func To(c ctx.Context, opts *ConnOptiions) {
 			yay = false
 		}
 	}
-}
-
-type connOrder struct {
-	src net.Conn
-	net string
-	to  []string
-	rd  time.Duration
-	wd  time.Duration
-}
-
-func handleConn(c ctx.Context, work *connOrder) {
-	var (
-		src     net.Conn = work.src
-		network string   = work.net
-		to      []string = work.to
-
-		dst net.Conn
-		err error
-	)
-
-	for _, addr := range to {
-		dst, err = net.Dial(network, addr)
-		if err == nil {
-			break
-		}
-	}
-	if dst == nil {
-		// FIXME: we need to handle this
-		panic("unable to connect")
-	}
-
-	var (
-		io = NewCopyIO()
-
-		one = make(chan struct{})
-		two = make(chan struct{})
-
-		f = log.Fields{"+src": src.LocalAddr(), "-src": src.RemoteAddr(), "dst": dst.RemoteAddr()}
-	)
-
-	io.ReadDeadline(work.rd)
-	io.WriteDeadline(work.wd)
-
-	go func() {
-		defer func() { close(one); dst.Close() }()
-		io.Copy(dst, src)
-	}()
-
-	go func() {
-		defer func() { close(two); src.Close() }()
-		io.Copy(src, dst)
-	}()
-
-	log.WithFields(f).Debug("enter")
-	for oy, ty := true, true; oy || ty; {
-		select {
-		case <-one:
-			oy = false
-		case <-two:
-			ty = false
-		case <-c.Done(): // force close on both ends
-			src.Close()
-			dst.Close()
-		}
-	}
-	log.WithFields(f).Debug("leave")
 }

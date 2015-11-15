@@ -1,4 +1,4 @@
-package proxy
+package main
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ type info struct {
 	To   []string `json:"dst"`
 }
 
-func Parse(uri string) (network, from string, to []string) {
+func parse(uri string) (network, from string, to []string) {
 	var i info
 	if err := json.Unmarshal([]byte(uri), &i); err != nil {
 		panic(err)

@@ -65,9 +65,9 @@ func listen(wg *sync.WaitGroup, uri string) ctx.CancelFunc {
 	wk, abort := ctx.WithCancel(ctx.Background())
 	go func() {
 		defer wg.Done()
-		network, from, to := proxy.Parse(uri)
+		network, from, to := parse(uri)
 		log.WithFields(log.Fields{"Net": network, "From": from, "To": to}).Info("begin")
-		proxy.To(wk, &proxy.ConnOptiions{
+		proxy.To(wk, &proxy.ConnOptions{
 			Net:  network,
 			From: from,
 			To:   to,
