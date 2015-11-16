@@ -12,44 +12,6 @@ import (
 	"sync"
 )
 
-func init() {
-	var level = os.Getenv("LOG_LEVEL")
-	switch level {
-	case "DEBUG":
-		log.SetLevel(log.DebugLevel)
-		break
-	case "INFO":
-		log.SetLevel(log.InfoLevel)
-		break
-	case "WARNING":
-		log.SetLevel(log.WarnLevel)
-		break
-	case "ERROR":
-		log.SetLevel(log.ErrorLevel)
-		break
-	case "FATAL":
-		log.SetLevel(log.FatalLevel)
-		break
-	case "PANIC":
-		log.SetLevel(log.PanicLevel)
-		break
-	default:
-		log.SetLevel(log.InfoLevel)
-		break
-	}
-
-	cli.AppHelpTemplate = `Usage: {{.Name}} PROXY_SPEC [PROXY_SPEC ...]
-
-{{.Usage}}
-
-Version: {{.Version}}
-
-PROXY_SPEC
-	EXAMPLE SPEC: {"net": "tcp", "src": ":16379", "dst": [":6379"]}
-	              {"net": "tcp", "srv": "/srv/redis/staging"}
-`
-}
-
 func main() {
 	app := cli.NewApp()
 	app.Name = "go-proxy"
@@ -65,13 +27,33 @@ func listen(wg *sync.WaitGroup, uri string) ctx.CancelFunc {
 	wk, abort := ctx.WithCancel(ctx.Background())
 	go func() {
 		defer wg.Done()
-		network, from, to := parse(uri)
-		log.WithFields(log.Fields{"Net": network, "From": from, "To": to}).Info("begin")
-		proxy.To(wk, &proxy.ConnOptions{
-			Net:  network,
-			From: from,
-			To:   to,
-		})
+
+		meta, err := parse(uri)
+		if err != nil {
+			log.Warning(err)
+			return
+		}
+
+		fields := log.Fields{"Net": meta.Net, "From": meta.From, "To": meta.To, "Endpoints": meta.Endpoints, "Service": meta.Service}
+
+		log.WithFields(fields).Info("begin")
+		if meta.Service != "" && len(meta.Endpoints) != 0 {
+			err = proxy.Srv(wk, &proxy.ConnOptions{
+				Net:  meta.Net,
+				From: meta.From,
+				Discovery: &proxy.DiscOptions{
+					Service:   meta.Service,
+					Endpoints: meta.Endpoints,
+				},
+			})
+		} else if len(meta.To) != 0 {
+			err = proxy.To(wk, &proxy.ConnOptions{
+				Net:  meta.Net,
+				From: meta.From,
+				To:   meta.To,
+			})
+		}
+		log.WithFields(fields).Warning(err)
 	}()
 	return abort
 }

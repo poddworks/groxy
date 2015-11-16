@@ -5,16 +5,21 @@ import (
 )
 
 type info struct {
-	Type string   `json:"net"`
-	From string   `json:"src"`
-	To   []string `json:"dst"`
+	Net  string `json:"net"`
+	From string `json:"src"`
+
+	// static assignment
+	To []string `json:"dst,omitempty"`
+
+	// read from discovery
+	Endpoints []string `json:"dsc,omitempty"`
+	Service   string   `json:"srv,omitempty"`
 }
 
-func parse(uri string) (network, from string, to []string) {
+func parse(uri string) (*info, error) {
 	var i info
 	if err := json.Unmarshal([]byte(uri), &i); err != nil {
-		panic(err)
+		return nil, err
 	}
-	network, from, to = i.Type, i.From, i.To
-	return
+	return &i, nil
 }
