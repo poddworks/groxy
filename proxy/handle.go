@@ -36,8 +36,9 @@ func handleConn(c ctx.Context, work *connOrder) {
 		}
 	}
 	if dst == nil {
-		// FIXME: we need to handle this
-		panic("unable to connect")
+		log.WithFields(log.Fields{"+src": src.LocalAddr(), "-src": src.RemoteAddr()}).Debug("failed")
+		src.Close()
+		return
 	}
 
 	var (
