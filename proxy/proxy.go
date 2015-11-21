@@ -96,7 +96,6 @@ func Srv(c ctx.Context, opts *ConnOptions) error {
 		return err
 	} else {
 		opts.To = candidates
-		log.WithFields(log.Fields{"To": opts.To}).Info("candidate")
 	}
 	ln, err := net.Listen(opts.Net, opts.From)
 	if err != nil {

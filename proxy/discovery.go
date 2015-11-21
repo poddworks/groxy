@@ -37,8 +37,10 @@ func doWatch(c ctx.Context, watcher etcd.Watcher) <-chan bool {
 			close(v)
 		}
 		log.WithFields(log.Fields{"Action": evt.Action, "Key": evt.Node.Key}).Debug("key space event")
-		if evt.Action == "set" || evt.Action == "expire" {
+		if evt.Action == "set" || evt.Action == "expire" || evt.Action == "delete" {
 			v <- true
+		} else {
+			v <- false
 		}
 	}()
 	return v
@@ -68,8 +70,8 @@ func Watch(c ctx.Context, d *DiscOptions) (output <-chan []string, stop <-chan s
 			select {
 			case <-c.Done():
 				yay = false
-			case _, ok := <-v:
-				if ok {
+			case expect, ok := <-v:
+				if ok && expect {
 					go doObtain(o, d)
 				}
 				yay = ok
@@ -96,5 +98,6 @@ func Obtain(d *DiscOptions) ([]string, error) {
 	for idx, n := range resp.Node.Nodes {
 		to[idx] = path.Base(n.Key)
 	}
+	log.WithFields(log.Fields{"To": to}).Info("candidate")
 	return to, nil
 }
