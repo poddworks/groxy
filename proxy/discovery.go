@@ -31,11 +31,13 @@ func NewWatcher(cfg etcd.Config, key string, index uint64) (etcd.Watcher, error)
 func doWatch(c ctx.Context, watcher etcd.Watcher) <-chan bool {
 	v := make(chan bool)
 	go func() {
-		_, err := watcher.Next(c)
+		evt, err := watcher.Next(c)
 		if err != nil {
 			log.Debug(err)
 			close(v)
-		} else {
+		}
+		log.WithFields(log.Fields{"Action": evt.Action, "Key": evt.Node.Key}).Debug("key space event")
+		if evt.Action == "set" || evt.Action == "expire" {
 			v <- true
 		}
 	}()
