@@ -6,8 +6,36 @@ import (
 
 	"errors"
 	"net"
+	"os"
 	"time"
 )
+
+func init() {
+	var level = os.Getenv("LOG_LEVEL")
+	switch level {
+	case "DEBUG":
+		log.SetLevel(log.DebugLevel)
+		break
+	case "INFO":
+		log.SetLevel(log.InfoLevel)
+		break
+	case "WARNING":
+		log.SetLevel(log.WarnLevel)
+		break
+	case "ERROR":
+		log.SetLevel(log.ErrorLevel)
+		break
+	case "FATAL":
+		log.SetLevel(log.FatalLevel)
+		break
+	case "PANIC":
+		log.SetLevel(log.PanicLevel)
+		break
+	default:
+		log.SetLevel(log.InfoLevel)
+		break
+	}
+}
 
 var (
 	ErrProxyEnd = errors.New("proxy end")
