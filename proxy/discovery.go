@@ -35,12 +35,13 @@ func doWatch(c ctx.Context, watcher etcd.Watcher) <-chan bool {
 		if err != nil {
 			log.Debug(err)
 			close(v)
-		}
-		log.WithFields(log.Fields{"Action": evt.Action, "Key": evt.Node.Key}).Debug("key space event")
-		if evt.Action == "set" || evt.Action == "expire" || evt.Action == "delete" {
-			v <- true
 		} else {
-			v <- false
+			log.WithFields(log.Fields{"Action": evt.Action, "Key": evt.Node.Key}).Debug("key space event")
+			if evt.Action == "set" || evt.Action == "expire" || evt.Action == "delete" {
+				v <- true
+			} else {
+				v <- false
+			}
 		}
 	}()
 	return v
