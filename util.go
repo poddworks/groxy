@@ -5,8 +5,9 @@ import (
 )
 
 type info struct {
-	Net  string `json:"net"`
-	From string `json:"src"`
+	Net       string   `json:"net"`
+	From      string   `json:"src"`
+	FromRange []string `json:"range"`
 
 	// static assignment
 	To []string `json:"dst,omitempty"`

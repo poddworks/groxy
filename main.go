@@ -34,24 +34,36 @@ func listen(wg *sync.WaitGroup, uri string) ctx.CancelFunc {
 			return
 		}
 
-		fields := log.Fields{"Net": meta.Net, "From": meta.From, "To": meta.To, "Endpoints": meta.Endpoints, "Service": meta.Service}
+		fields := log.Fields{"Net": meta.Net, "From": meta.From, "FromRange": meta.FromRange, "To": meta.To, "Endpoints": meta.Endpoints, "Service": meta.Service}
 
 		log.WithFields(fields).Info("begin")
 		if meta.Service != "" && len(meta.Endpoints) != 0 {
-			err = proxy.Srv(wk, &proxy.ConnOptions{
-				Net:  meta.Net,
-				From: meta.From,
+			opts := &proxy.ConnOptions{
+				Net: meta.Net,
 				Discovery: &proxy.DiscOptions{
 					Service:   meta.Service,
 					Endpoints: meta.Endpoints,
 				},
-			})
+			}
+			if len(meta.FromRange) == 0 {
+				opts.From = meta.From
+				err = proxy.Srv(wk, opts)
+			} else {
+				opts.FromRange = meta.FromRange
+				err = proxy.ClusterSrv(wk, opts)
+			}
 		} else if len(meta.To) != 0 {
-			err = proxy.To(wk, &proxy.ConnOptions{
-				Net:  meta.Net,
-				From: meta.From,
-				To:   meta.To,
-			})
+			opts := &proxy.ConnOptions{
+				Net: meta.Net,
+				To:  meta.To,
+			}
+			if len(meta.FromRange) == 0 {
+				opts.From = meta.From
+				err = proxy.To(wk, opts)
+			} else {
+				opts.FromRange = meta.FromRange
+				err = proxy.ClusterTo(wk, opts)
+			}
 		}
 		log.WithFields(fields).Warning(err)
 	}()

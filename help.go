@@ -12,7 +12,8 @@ func init() {
 Version: {{.Version}}
 
 PROXY_SPEC
-	EXAMPLE SPEC: {"net": "tcp", "src": ":16379", "dst": [":6379"]}
-	              {"net": "tcp", "srv": "/srv/redis/staging"}
+	- {"net": "tcp", "src": ":16379", "dst": [":6379"]}
+	- {"net": "tcp", "src": ":16379", "srv": "/srv/redis/staging"}
+	- {"net": "tcp", "range": [":16379", ":26379"], "srv": "/srv/redis/staging"}
 `
 }
