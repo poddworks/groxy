@@ -7,6 +7,7 @@ import (
 	"errors"
 	"net"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -39,12 +40,15 @@ func init() {
 
 var (
 	ErrProxyEnd = errors.New("proxy end")
+
+	ErrClusterNodeMismatch = errors.New("Origin and target count mismatch")
 )
 
 // ConnOptions defines how the proxy should behave
 type ConnOptions struct {
 	Net          string
 	From         string
+	FromRange    []string
 	To           []string
 	Discovery    *DiscOptions
 	ReadTimeout  time.Duration
@@ -57,7 +61,7 @@ type DiscOptions struct {
 	AfterIndex uint64
 }
 
-// To takes a Context and ConnOptiions and begin listening for request to
+// To takes a Context and ConnOptions and begin listening for request to
 // proxy.
 // Review https://godoc.org/golang.org/x/net/context for understanding the
 // control flow.
@@ -87,12 +91,10 @@ func To(c ctx.Context, opts *ConnOptions) error {
 }
 
 func Srv(c ctx.Context, opts *ConnOptions) error {
-
 	if opts.Discovery == nil {
 		panic("DiscOptions missing")
 	}
-	candidates, err := Obtain(opts.Discovery)
-	if err != nil {
+	if candidates, err := Obtain(opts.Discovery); err != nil {
 		return err
 	} else {
 		opts.To = candidates
@@ -132,5 +134,82 @@ func Srv(c ctx.Context, opts *ConnOptions) error {
 			yay = false
 		}
 	}
+	return ErrProxyEnd
+}
+
+func ClusterTo(c ctx.Context, opts *ConnOptions) error {
+	if len(opts.FromRange) > len(opts.To) {
+		return ErrClusterNodeMismatch
+	}
+	var wg sync.WaitGroup
+	for idx, from := range opts.FromRange {
+		wg.Add(1)
+		go func(from, to string) {
+			// FIXME: need to report and err out
+			To(c, &ConnOptions{
+				Net:          opts.Net,
+				From:         from,
+				To:           []string{to},
+				ReadTimeout:  opts.ReadTimeout,
+				WriteTimeout: opts.WriteTimeout,
+			})
+			wg.Done()
+		}(from, opts.To[idx])
+	}
+	<-c.Done()
+	wg.Wait()
+	return ErrProxyEnd
+}
+
+func ClusterSrv(c ctx.Context, opts *ConnOptions) error {
+	if opts.Discovery == nil {
+		panic("DiscOptions missing")
+	}
+	if candidates, err := Obtain(opts.Discovery); err != nil {
+		return err
+	} else {
+		opts.To = candidates
+	}
+	if len(opts.FromRange) > len(opts.To) {
+		return ErrClusterNodeMismatch
+	}
+
+	newNodes, wstp := Watch(c, opts.Discovery) // spawn Watcher
+	defer func() { <-wstp }()
+
+	for yay := true; yay; {
+		var wg sync.WaitGroup
+		work, abort := ctx.WithCancel(c)
+		for idx, from := range opts.FromRange {
+			var to []string
+			if idx+1 > len(opts.To) {
+				log.Warning("candidate node less then required range")
+			} else {
+				to = append(to, opts.To[idx])
+			}
+			wg.Add(1)
+			go func(from string, to []string) {
+				// FIXME: need to report and err out
+				To(work, &ConnOptions{
+					Net:          opts.Net,
+					From:         from,
+					To:           to,
+					ReadTimeout:  opts.ReadTimeout,
+					WriteTimeout: opts.WriteTimeout,
+				})
+				log.Debug("leave")
+				wg.Done()
+			}(from, to)
+		}
+		select {
+		case opts.To = <-newNodes:
+			abort()
+		case <-c.Done():
+			abort()
+			yay = false
+		}
+		wg.Wait()
+	}
+
 	return ErrProxyEnd
 }
