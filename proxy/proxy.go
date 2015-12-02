@@ -53,6 +53,7 @@ type ConnOptions struct {
 	Discovery    *DiscOptions
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
+	Balance      bool
 }
 
 type DiscOptions struct {
@@ -61,17 +62,7 @@ type DiscOptions struct {
 	AfterIndex uint64
 }
 
-// To takes a Context and ConnOptions and begin listening for request to
-// proxy.
-// Review https://godoc.org/golang.org/x/net/context for understanding the
-// control flow.
-func To(c ctx.Context, opts *ConnOptions) error {
-	ln, err := net.Listen(opts.Net, opts.From)
-	if err != nil {
-		return err
-	}
-	newConn, astp := AcceptWorker(c, ln) // spawn Accepter
-	defer func() { ln.Close(); <-astp }()
+func runTo(newConn <-chan net.Conn, c ctx.Context, opts *ConnOptions) {
 	for yay := true; yay; {
 		select {
 		case conn := <-newConn:
@@ -87,26 +78,47 @@ func To(c ctx.Context, opts *ConnOptions) error {
 			yay = false
 		}
 	}
-	return ErrProxyEnd
 }
 
-func Srv(c ctx.Context, opts *ConnOptions) error {
-	if opts.Discovery == nil {
-		panic("DiscOptions missing")
+func balanceTo(newConn <-chan net.Conn, c ctx.Context, opts *ConnOptions) {
+	for yay, r := true, 0; yay; r = (r + 1) % len(opts.To) {
+		select {
+		case conn := <-newConn:
+			work, _ := ctx.WithCancel(c)
+			go handleConn(work, &connOrder{
+				conn,
+				opts.Net,
+				opts.To[r : r+1],
+				opts.ReadTimeout,
+				opts.WriteTimeout,
+			})
+		case <-c.Done():
+			yay = false
+		}
 	}
-	if candidates, err := Obtain(opts.Discovery); err != nil {
-		return err
-	} else {
-		opts.To = candidates
-	}
+}
+
+// To takes a Context and ConnOptions and begin listening for request to
+// proxy.
+// To obtains origin candidates through static listing.
+// Review https://godoc.org/golang.org/x/net/context for understanding the
+// control flow.
+func To(c ctx.Context, opts *ConnOptions) error {
 	ln, err := net.Listen(opts.Net, opts.From)
 	if err != nil {
 		return err
 	}
-	newConn, astp := AcceptWorker(c, ln)       // spawn Accepter
-	newNodes, wstp := Watch(c, opts.Discovery) // spawn Watcher
-	defer func() { ln.Close(); _, _ = <-astp, <-wstp }()
+	newConn, astp := AcceptWorker(c, ln) // spawn Accepter
+	defer func() { ln.Close(); <-astp }()
+	if opts.Balance {
+		balanceTo(newConn, c, opts)
+	} else {
+		runTo(newConn, c, opts)
+	}
+	return ErrProxyEnd
+}
 
+func runSrv(newConn <-chan net.Conn, newNodes <-chan []string, c ctx.Context, opts *ConnOptions) {
 	var connList = make([]ctx.CancelFunc, 0)
 	for yay := true; yay; {
 		select {
@@ -134,6 +146,68 @@ func Srv(c ctx.Context, opts *ConnOptions) error {
 			yay = false
 		}
 	}
+}
+
+func balacnceSrv(newConn <-chan net.Conn, newNodes <-chan []string, c ctx.Context, opts *ConnOptions) {
+	var connList = make([]ctx.CancelFunc, 0)
+	for yay, r := true, 0; yay; r = (r + 1) % len(opts.To) {
+		select {
+		case opts.To = <-newNodes:
+			// TODO: memory efficient way of doing this?
+			for _, abort := range connList {
+				abort()
+			}
+			connList = make([]ctx.CancelFunc, 0)
+		case conn := <-newConn:
+			if len(opts.To) == 0 {
+				conn.Close() // close connection to avoid confusion
+			} else {
+				work, abort := ctx.WithCancel(c)
+				go handleConn(work, &connOrder{
+					conn,
+					opts.Net,
+					opts.To[r : r+1],
+					opts.ReadTimeout,
+					opts.WriteTimeout,
+				})
+				connList = append(connList, abort)
+			}
+		case <-c.Done():
+			yay = false
+		}
+	}
+}
+
+// Srv takes a Context and ConnOptions and begin listening for request to
+// proxy.
+// Srv obtains origin candidates through discovery service by key.  If the
+// candidate list changes in discovery record, Srv will reject current
+// connections and obtain new origin candidates.
+// Review https://godoc.org/golang.org/x/net/context for understanding the
+// control flow.
+func Srv(c ctx.Context, opts *ConnOptions) error {
+	if opts.Discovery == nil {
+		panic("DiscOptions missing")
+	}
+	if candidates, err := Obtain(opts.Discovery); err != nil {
+		return err
+	} else {
+		opts.To = candidates
+	}
+	ln, err := net.Listen(opts.Net, opts.From)
+	if err != nil {
+		return err
+	}
+	newConn, astp := AcceptWorker(c, ln)       // spawn Accepter
+	newNodes, wstp := Watch(c, opts.Discovery) // spawn Watcher
+	defer func() { ln.Close(); _, _ = <-astp, <-wstp }()
+
+	if opts.Balance {
+		balacnceSrv(newConn, newNodes, c, opts)
+	} else {
+		runSrv(newConn, newNodes, c, opts)
+	}
+
 	return ErrProxyEnd
 }
 

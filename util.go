@@ -15,6 +15,9 @@ type info struct {
 	// read from discovery
 	Endpoints []string `json:"dsc,omitempty"`
 	Service   string   `json:"srv,omitempty"`
+
+	// balance connection request by origins
+	Balance bool `json:"robin"`
 }
 
 func parse(uri string) (*info, error) {

@@ -34,12 +34,21 @@ func listen(wg *sync.WaitGroup, uri string) ctx.CancelFunc {
 			return
 		}
 
-		fields := log.Fields{"Net": meta.Net, "From": meta.From, "FromRange": meta.FromRange, "To": meta.To, "Endpoints": meta.Endpoints, "Service": meta.Service}
+		fields := log.Fields{
+			"Net":       meta.Net,
+			"From":      meta.From,
+			"FromRange": meta.FromRange,
+			"To":        meta.To,
+			"Endpoints": meta.Endpoints,
+			"Service":   meta.Service,
+			"Balance":   meta.Balance,
+		}
 
 		log.WithFields(fields).Info("begin")
 		if meta.Service != "" && len(meta.Endpoints) != 0 {
 			opts := &proxy.ConnOptions{
-				Net: meta.Net,
+				Net:     meta.Net,
+				Balance: meta.Balance,
 				Discovery: &proxy.DiscOptions{
 					Service:   meta.Service,
 					Endpoints: meta.Endpoints,
@@ -54,8 +63,9 @@ func listen(wg *sync.WaitGroup, uri string) ctx.CancelFunc {
 			}
 		} else if len(meta.To) != 0 {
 			opts := &proxy.ConnOptions{
-				Net: meta.Net,
-				To:  meta.To,
+				Net:     meta.Net,
+				To:      meta.To,
+				Balance: meta.Balance,
 			}
 			if len(meta.FromRange) == 0 {
 				opts.From = meta.From
