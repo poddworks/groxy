@@ -41,6 +41,8 @@ func init() {
 var (
 	ErrProxyEnd = errors.New("proxy end")
 
+	ErrClusterNotEnoughNodes = errors.New("candidate less then asked")
+
 	ErrClusterNodeMismatch = errors.New("Origin and target count mismatch")
 )
 
@@ -196,7 +198,8 @@ func Srv(c ctx.Context, opts *ConnOptions) error {
 		panic("DiscOptions missing")
 	}
 	if candidates, err := Obtain(opts.Discovery); err != nil {
-		return err
+		log.WithFields(log.Fields{"err": err}).Warning("Srv")
+		opts.To = make([]string, 0)
 	} else {
 		opts.To = candidates
 	}
@@ -219,22 +222,26 @@ func Srv(c ctx.Context, opts *ConnOptions) error {
 
 func ClusterTo(c ctx.Context, opts *ConnOptions) error {
 	if len(opts.FromRange) > len(opts.To) {
-		return ErrClusterNodeMismatch
+		log.WithFields(log.Fields{"err": ErrClusterNodeMismatch}).Warning("ClusterTo")
 	}
 	var wg sync.WaitGroup
 	for idx, from := range opts.FromRange {
+		if idx+1 > len(opts.To) {
+			log.WithFields(log.Fields{"err": ErrClusterNotEnoughNodes}).Warning("ClusterTo")
+			continue
+		}
 		wg.Add(1)
-		go func(from, to string) {
+		go func(from string, to []string) {
 			// FIXME: need to report and err out
 			To(c, &ConnOptions{
 				Net:          opts.Net,
 				From:         from,
-				To:           []string{to},
+				To:           to,
 				ReadTimeout:  opts.ReadTimeout,
 				WriteTimeout: opts.WriteTimeout,
 			})
 			wg.Done()
-		}(from, opts.To[idx])
+		}(from, []string{opts.To[idx]})
 	}
 	<-c.Done()
 	wg.Wait()
@@ -246,12 +253,13 @@ func ClusterSrv(c ctx.Context, opts *ConnOptions) error {
 		panic("DiscOptions missing")
 	}
 	if candidates, err := Obtain(opts.Discovery); err != nil {
-		return err
+		log.WithFields(log.Fields{"err": err}).Warning("ClusterSrv")
+		opts.To = make([]string, 0)
 	} else {
 		opts.To = candidates
 	}
 	if len(opts.FromRange) > len(opts.To) {
-		return ErrClusterNodeMismatch
+		log.WithFields(log.Fields{"err": ErrClusterNodeMismatch}).Warning("ClusterSrv")
 	}
 
 	newNodes, wstp := Watch(c, opts.Discovery) // spawn Watcher
@@ -261,11 +269,9 @@ func ClusterSrv(c ctx.Context, opts *ConnOptions) error {
 		var wg sync.WaitGroup
 		work, abort := ctx.WithCancel(c)
 		for idx, from := range opts.FromRange {
-			var to []string
 			if idx+1 > len(opts.To) {
-				log.WithFields(log.Fields{"err": "candidate less then asked"}).Warning("ClusterSrv")
-			} else {
-				to = append(to, opts.To[idx])
+				log.WithFields(log.Fields{"err": ErrClusterNotEnoughNodes}).Warning("ClusterSrv")
+				continue
 			}
 			wg.Add(1)
 			go func(from string, to []string) {
@@ -277,9 +283,9 @@ func ClusterSrv(c ctx.Context, opts *ConnOptions) error {
 					ReadTimeout:  opts.ReadTimeout,
 					WriteTimeout: opts.WriteTimeout,
 				})
-				log.WithFields(log.Fields{"from": from, "to": to}).Debug("leave")
+				log.WithFields(log.Fields{"from": from, "to": to}).Debug("ClusterSrv")
 				wg.Done()
-			}(from, to)
+			}(from, []string{opts.To[idx]})
 		}
 		for yelp := true; yelp; {
 			select {
