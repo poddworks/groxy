@@ -20,7 +20,7 @@ func AcceptWorker(c ctx.Context, ln net.Listener) (newConn <-chan net.Conn, stop
 			default:
 				conn, err := ln.Accept()
 				if err != nil {
-					log.Debug(err)
+					log.WithFields(log.Fields{"err": err}).Debug("accept")
 				} else {
 					nc <- conn
 				}

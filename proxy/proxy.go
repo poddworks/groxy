@@ -263,7 +263,7 @@ func ClusterSrv(c ctx.Context, opts *ConnOptions) error {
 		for idx, from := range opts.FromRange {
 			var to []string
 			if idx+1 > len(opts.To) {
-				log.Warning("candidate node less then required range")
+				log.WithFields(log.Fields{"err": "candidate less then asked"}).Warning("ClusterSrv")
 			} else {
 				to = append(to, opts.To[idx])
 			}
@@ -277,7 +277,7 @@ func ClusterSrv(c ctx.Context, opts *ConnOptions) error {
 					ReadTimeout:  opts.ReadTimeout,
 					WriteTimeout: opts.WriteTimeout,
 				})
-				log.Debug("leave")
+				log.WithFields(log.Fields{"from": from, "to": to}).Debug("leave")
 				wg.Done()
 			}(from, to)
 		}

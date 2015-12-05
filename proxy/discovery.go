@@ -37,7 +37,7 @@ func doWatch(c ctx.Context, watcher etcd.Watcher) <-chan bool {
 	go func() {
 		evt, err := watcher.Next(c)
 		if err != nil {
-			log.Debug(err)
+			log.WithFields(log.Fields{"err": err}).Debug("watch")
 			retry.Delay()
 			v <- false
 		} else {
@@ -59,7 +59,7 @@ func obtainWorker(o chan<- []string, d *DiscOptions) chan<- bool {
 		for _ = range order {
 			nodes, err := Obtain(d)
 			if err != nil {
-				log.Warning(err)
+				log.WithFields(log.Fields{"err": err}).Debug("watch")
 				o <- nil
 			} else {
 				o <- nodes
@@ -76,7 +76,7 @@ func Watch(c ctx.Context, d *DiscOptions) (output <-chan []string, stop <-chan s
 		cfg := etcd.Config{Endpoints: d.Endpoints}
 		watcher, err := NewWatcher(cfg, d.Service, d.AfterIndex)
 		if err != nil {
-			log.Warning(err)
+			log.WithFields(log.Fields{"err": err}).Warning("watch")
 			return
 		}
 		order := obtainWorker(o, d)
