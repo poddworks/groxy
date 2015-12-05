@@ -11,7 +11,7 @@ const (
 type Backoff int64
 
 func (b Backoff) min(x, y time.Duration) time.Duration {
-	if x > y {
+	if x < y {
 		return x
 	} else {
 		return y
