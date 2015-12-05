@@ -8,6 +8,10 @@ import (
 	"path"
 )
 
+var (
+	retry Backoff
+)
+
 func NewKeysAPI(cfg etcd.Config) (etcd.KeysAPI, error) {
 	eCli, err := etcd.New(cfg)
 	if err != nil {
@@ -34,8 +38,10 @@ func doWatch(c ctx.Context, watcher etcd.Watcher) <-chan bool {
 		evt, err := watcher.Next(c)
 		if err != nil {
 			log.Debug(err)
-			close(v)
+			retry.Delay()
+			v <- false
 		} else {
+			retry.Reset()
 			log.WithFields(log.Fields{"Action": evt.Action, "Key": evt.Node.Key}).Debug("key space event")
 			if evt.Action == "set" || evt.Action == "expire" || evt.Action == "delete" {
 				v <- true
@@ -47,13 +53,20 @@ func doWatch(c ctx.Context, watcher etcd.Watcher) <-chan bool {
 	return v
 }
 
-func doObtain(o chan<- []string, d *DiscOptions) {
-	nodes, err := Obtain(d)
-	if err != nil {
-		log.Warning(err)
-	} else {
-		o <- nodes
-	}
+func obtainWorker(o chan<- []string, d *DiscOptions) chan<- bool {
+	order := make(chan bool, 8)
+	go func() {
+		for _ = range order {
+			nodes, err := Obtain(d)
+			if err != nil {
+				log.Warning(err)
+				o <- nil
+			} else {
+				o <- nodes
+			}
+		}
+	}()
+	return order
 }
 
 func Watch(c ctx.Context, d *DiscOptions) (output <-chan []string, stop <-chan struct{}) {
@@ -66,6 +79,8 @@ func Watch(c ctx.Context, d *DiscOptions) (output <-chan []string, stop <-chan s
 			log.Warning(err)
 			return
 		}
+		order := obtainWorker(o, d)
+		defer close(order)
 		for yay := true; yay; {
 			v := doWatch(c, watcher)
 			select {
@@ -73,7 +88,7 @@ func Watch(c ctx.Context, d *DiscOptions) (output <-chan []string, stop <-chan s
 				yay = false
 			case expect, ok := <-v:
 				if ok && expect {
-					go doObtain(o, d)
+					order <- true
 				}
 				yay = ok
 			}

@@ -122,12 +122,15 @@ func runSrv(newConn <-chan net.Conn, newNodes <-chan []string, c ctx.Context, op
 	var connList = make([]ctx.CancelFunc, 0)
 	for yay := true; yay; {
 		select {
-		case opts.To = <-newNodes:
-			// TODO: memory efficient way of doing this?
-			for _, abort := range connList {
-				abort()
+		case nodes := <-newNodes:
+			if nodes != nil {
+				opts.To = nodes
+				// TODO: memory efficient way of doing this?
+				for _, abort := range connList {
+					abort()
+				}
+				connList = make([]ctx.CancelFunc, 0)
 			}
-			connList = make([]ctx.CancelFunc, 0)
 		case conn := <-newConn:
 			if len(opts.To) == 0 {
 				conn.Close() // close connection to avoid confusion
@@ -152,12 +155,15 @@ func balacnceSrv(newConn <-chan net.Conn, newNodes <-chan []string, c ctx.Contex
 	var connList = make([]ctx.CancelFunc, 0)
 	for yay, r := true, 0; yay; r = (r + 1) % len(opts.To) {
 		select {
-		case opts.To = <-newNodes:
-			// TODO: memory efficient way of doing this?
-			for _, abort := range connList {
-				abort()
+		case nodes := <-newNodes:
+			if nodes != nil {
+				opts.To = nodes
+				// TODO: memory efficient way of doing this?
+				for _, abort := range connList {
+					abort()
+				}
+				connList = make([]ctx.CancelFunc, 0)
 			}
-			connList = make([]ctx.CancelFunc, 0)
 		case conn := <-newConn:
 			if len(opts.To) == 0 {
 				conn.Close() // close connection to avoid confusion
@@ -275,12 +281,18 @@ func ClusterSrv(c ctx.Context, opts *ConnOptions) error {
 				wg.Done()
 			}(from, to)
 		}
-		select {
-		case opts.To = <-newNodes:
-			abort()
-		case <-c.Done():
-			abort()
-			yay = false
+		for yelp := true; yelp; {
+			select {
+			case nodes := <-newNodes:
+				if nodes != nil {
+					opts.To = nodes
+					abort()
+					yelp = false
+				}
+			case <-c.Done():
+				abort()
+				yay, yelp = false, false
+			}
 		}
 		wg.Wait()
 	}
