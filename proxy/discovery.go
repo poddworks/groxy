@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	retry Backoff
+	retry = &Backoff{}
 )
 
 func NewKeysAPI(cfg etcd.Config) (etcd.KeysAPI, error) {
