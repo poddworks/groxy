@@ -106,17 +106,19 @@ func balanceTo(newConn <-chan net.Conn, c ctx.Context, opts *ConnOptions) {
 // Review https://godoc.org/golang.org/x/net/context for understanding the
 // control flow.
 func To(c ctx.Context, opts *ConnOptions) error {
-	ln, err := net.Listen(opts.Net, opts.From)
+	newConn, astp, err := AcceptWorker(c, opts.Net, opts.From) // spawn Accepter
 	if err != nil {
-		return err
+		return err // something bad happend to Accepter
 	}
-	newConn, astp := AcceptWorker(c, ln) // spawn Accepter
-	defer func() { ln.Close(); <-astp }()
+	defer func() { <-astp }()
+
+	log.WithFields(log.Fields{"from": opts.From}).Debug("TO start")
 	if opts.Balance {
 		balanceTo(newConn, c, opts)
 	} else {
 		runTo(newConn, c, opts)
 	}
+	log.WithFields(log.Fields{"from": opts.From}).Debug("TO stop")
 	return ErrProxyEnd
 }
 
@@ -203,20 +205,20 @@ func Srv(c ctx.Context, opts *ConnOptions) error {
 	} else {
 		opts.To = candidates
 	}
-	ln, err := net.Listen(opts.Net, opts.From)
+	newConn, astp, err := AcceptWorker(c, opts.Net, opts.From) // spawn Accepter
 	if err != nil {
-		return err
+		return err // something bad happend to Accepter
 	}
-	newConn, astp := AcceptWorker(c, ln)       // spawn Accepter
 	newNodes, wstp := Watch(c, opts.Discovery) // spawn Watcher
-	defer func() { ln.Close(); _, _ = <-astp, <-wstp }()
+	defer func() { _, _ = <-astp, <-wstp }()
 
+	log.WithFields(log.Fields{"from": opts.From}).Debug("SRV start")
 	if opts.Balance {
 		balacnceSrv(newConn, newNodes, c, opts)
 	} else {
 		runSrv(newConn, newNodes, c, opts)
 	}
-
+	log.WithFields(log.Fields{"from": opts.From}).Debug("SRV stop")
 	return ErrProxyEnd
 }
 

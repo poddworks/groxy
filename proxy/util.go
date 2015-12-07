@@ -33,3 +33,7 @@ func (b *Backoff) Reset() {
 	log.WithFields(log.Fields{"attempts": b.attempts}).Debug("reset")
 	b.attempts = 0
 }
+
+func (b *Backoff) Attempts() int64 {
+	return b.attempts
+}
