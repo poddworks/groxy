@@ -110,9 +110,11 @@ func Obtain(d *DiscOptions) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	to := make([]string, len(resp.Node.Nodes))
-	for idx, n := range resp.Node.Nodes {
-		to[idx] = path.Base(n.Key)
+	to := make([]string, 0)
+	for _, n := range resp.Node.Nodes {
+		if !n.Dir {
+			to = append(to, path.Base(n.Key))
+		}
 	}
 	log.WithFields(log.Fields{"To": to}).Info("candidate")
 	return to, nil
