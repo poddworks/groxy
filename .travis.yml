@@ -4,8 +4,7 @@ go:
     - 1.5.1
 
 env:
-    - CGO_ENABLED=0
-    - GOOS=linux
+    - CGO_ENABLED=0 GOOS=linux
 
 script:
     - go build -a -installsuffix cgo -o go-proxy
