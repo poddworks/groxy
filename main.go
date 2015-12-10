@@ -3,110 +3,92 @@ package main
 import (
 	"github.com/jeffjen/go-proxy/proxy"
 
-	log "github.com/Sirupsen/logrus"
 	cli "github.com/codegangsta/cli"
 	ctx "golang.org/x/net/context"
 
+	"fmt"
 	"os"
 	"os/signal"
-	"sync"
 )
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "go-proxy"
-	app.Usage = "Facilitate TCP proxy"
+	app.Usage = "The TCP proxy with discovery service support"
 	app.Authors = []cli.Author{
 		cli.Author{"Yi-Hung Jen", "yihungjen@gmail.com"},
+	}
+	app.Flags = []cli.Flag{
+		cli.StringFlag{Name: "net", Usage: "Network type", Value: "tcp4"},
+		cli.StringSliceFlag{Name: "src", Usage: "Origin address to listen"},
+		cli.StringSliceFlag{Name: "dst", Usage: "Target to proxy to"},
+		cli.StringSliceFlag{Name: "dsc", Usage: "Discovery service endpoint"},
+		cli.StringFlag{Name: "srv", Usage: "Service identity in discovery"},
+		cli.BoolFlag{Name: "lb", Usage: "Weather we do load balance"},
+		cli.StringFlag{Name: "loglevel", Usage: "Set debug level", Value: "INFO", EnvVar: "LOG_LEVEL"},
 	}
 	app.Action = Proxy
 	app.Run(os.Args)
 }
 
-func listen(wg *sync.WaitGroup, uri string) ctx.CancelFunc {
-	wk, abort := ctx.WithCancel(ctx.Background())
-	go func() {
-		defer wg.Done()
-
-		meta, err := parse(uri)
-		if err != nil {
-			log.Warning(err)
-			return
-		}
-
-		fields := log.Fields{
-			"Net":       meta.Net,
-			"From":      meta.From,
-			"FromRange": meta.FromRange,
-			"To":        meta.To,
-			"Endpoints": meta.Endpoints,
-			"Service":   meta.Service,
-			"Balance":   meta.Balance,
-		}
-
-		log.WithFields(fields).Info("begin")
-		if meta.Service != "" && len(meta.Endpoints) != 0 {
-			opts := &proxy.ConnOptions{
-				Net:     meta.Net,
-				Balance: meta.Balance,
-				Discovery: &proxy.DiscOptions{
-					Service:   meta.Service,
-					Endpoints: meta.Endpoints,
-				},
-			}
-			if len(meta.FromRange) == 0 {
-				opts.From = meta.From
-				err = proxy.Srv(wk, opts)
-			} else {
-				opts.FromRange = meta.FromRange
-				err = proxy.ClusterSrv(wk, opts)
-			}
-		} else if len(meta.To) != 0 {
-			opts := &proxy.ConnOptions{
-				Net:     meta.Net,
-				To:      meta.To,
-				Balance: meta.Balance,
-			}
-			if len(meta.FromRange) == 0 {
-				opts.From = meta.From
-				err = proxy.To(wk, opts)
-			} else {
-				opts.FromRange = meta.FromRange
-				err = proxy.ClusterTo(wk, opts)
-			}
-		}
-		log.WithFields(fields).Warning(err)
-	}()
-	return abort
-}
-
 func Proxy(c *cli.Context) {
 	var (
-		wg      sync.WaitGroup
-		workers = make(map[string]ctx.CancelFunc)
+		Net = c.String("net")
+		Dsc = c.StringSlice("dsc")
+
+		Lb = c.Bool("lb")
+
+		From = make([]string, 0)
+
+		meta *info
 	)
+
+	proxy.LogLevel(c.String("loglevel"))
 
 	trigger := make(chan os.Signal, 1)
 	signal.Notify(trigger, os.Interrupt, os.Kill)
 
-	for _, uri := range c.Args() {
-		wg.Add(1)
-		workers[uri] = listen(&wg, uri)
+	wk, abort := ctx.WithCancel(ctx.Background())
+
+	if Net == "" {
+		fmt.Fprintln(os.Stderr, "missing required flag --net")
+		os.Exit(1)
+	}
+	if from := c.StringSlice("src"); len(from) != 0 {
+		for _, one_from := range from {
+			From = append(From, one_from)
+		}
+	}
+	if len(From) == 0 {
+		fmt.Fprintln(os.Stderr, "missing required flag --src")
+		os.Exit(1)
+	}
+	if dst := c.StringSlice("dst"); len(dst) != 0 {
+		var To = make([]string, len(dst))
+		for idx, one_dst := range dst {
+			To[idx] = one_dst
+		}
+		if len(From) == 1 {
+			meta = &info{Net: Net, From: From[0], To: To, Balance: Lb}
+		} else {
+			meta = &info{Net: Net, FromRange: From, To: To, Balance: Lb}
+		}
+	} else if srv := c.String("srv"); srv != "" {
+		if len(From) == 1 {
+			meta = &info{Net: Net, From: From[0], Service: srv, Endpoints: Dsc, Balance: Lb}
+		} else {
+			meta = &info{Net: Net, FromRange: From, Service: srv, Endpoints: Dsc, Balance: Lb}
+		}
 	}
 
-	if len(workers) == 0 {
-		log.Info("nothing to do, abort...")
-		return
-	}
+	// launch proxy worker
+	halt := listen(wk, meta)
 
 	// Block until a signal is received.
 	<-trigger
-	for _, abort := range workers {
-		abort()
-	}
+	abort()
 
-	// Reap all workers
-	log.Info("waiting...")
-	wg.Wait()
-	log.Info("leaving now")
+	fmt.Println("waiting...")
+	<-halt
+	fmt.Println("leaving now")
 }

@@ -5,15 +5,22 @@ import (
 )
 
 func init() {
-	cli.AppHelpTemplate = `Usage: {{.Name}} PROXY_SPEC [PROXY_SPEC ...]
+	cli.AppHelpTemplate = `Usage: {{.Name}} [OPTIONS]
 
 {{.Usage}}
 
-Version: {{.Version}}
+Options:
+	{{range .Flags}}{{.}}
+	{{end}}
 
-PROXY_SPEC
-	- {"net": "tcp", "src": ":16379", "dst": [":6379"]}
-	- {"net": "tcp", "src": ":16379", "srv": "/srv/redis/staging"}
-	- {"net": "tcp", "range": [":16379", ":26379"], "srv": "/srv/redis/staging"}
+Balance request between two redis node (READ ONLY)
+	{{.Name}} --src :16379 --dst 127.0.0.1:6379 --dst 127.0.0.1:6380 --lb
+
+Proxy to targets by service key name
+	{{.Name}} --src :27017 --srv /srv/mongodb/debug --dsc http://localhost:2379
+
+Many to many proxy
+	{{.Name}} --src :37017 --src :37018 --dst localhost:27017 --dst localhost:27018
+
 `
 }

@@ -12,7 +12,10 @@ import (
 )
 
 func init() {
-	var level = os.Getenv("LOG_LEVEL")
+	LogLevel(os.Getenv("LOG_LEVEL"))
+}
+
+func LogLevel(level string) {
 	switch level {
 	case "DEBUG":
 		log.SetLevel(log.DebugLevel)
