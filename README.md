@@ -6,9 +6,9 @@
 
 A simple proxy implementation for the mondern day
 
-This project aims to produce a programable proxy to facilitate the
-**Ambassador** pattern.  Find out more about [running an Ambassador in micro
-service deployment](https://github.com/jeffjen/ambd)
+This project aims to produce a programmable proxy to facilitate **Ambassador**
+pattern.  Find out more about [Ambassador in micro service
+deployment](https://github.com/jeffjen/ambd)
 
 *go-proxy* strives to achieve the following goals
 - To be not complicated
@@ -22,7 +22,9 @@ service deployment](https://github.com/jeffjen/ambd)
 
 ### Running go-proxy as a standalone program
 - Running with static candidates:  
-    `go-proxy --src :16379 --dst 10.0.3.144:6379`
+    ```
+    go-proxy --src :16379 --dst 10.0.3.144:6379
+    ```
 
 - Running with discovery backend:  
     ```
@@ -32,14 +34,15 @@ service deployment](https://github.com/jeffjen/ambd)
     ```
 
 ### Behavior
-The proxy module does not attempt perform reconnection to remote endpoint.
-The rule is fail fast and have the client retry.
+The proxy module does not attempt to perform reconnection to remote endpoint.
+The rule is fail fast retry.
 
-The assumption here is that nodes are registered under key `/srv/redis/debug`,
-with the last segment being the actual netloc of the node in this service
-group i.e. `/srv/redis/debug/10.0.1.134:6379`, `/srv/redis/debug/10.0.2.122:6379`.
+When connected with a discovery backend, nodes are registered under a key e.g.
+`/srv/redis/debug`,
+with the last segment being the actual netloc of the node in that service i.e.
+`/srv/redis/debug/10.0.1.134:6379`, `/srv/redis/debug/10.0.2.122:6379`.
 
-When the members in the `/srv/redis/debug` service changes e.g. leaving,
-joining, the proxy will reject all established connections (if not already
-broken from the view point of the client).
+When members in the `/srv/redis/debug` service changes e.g. leaving,
+joining, the proxy will reject established connections (if not already
+broken from the view point of connected client).
 
