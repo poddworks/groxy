@@ -202,7 +202,7 @@ func Srv(c ctx.Context, opts *ConnOptions) error {
 	if opts.Discovery == nil {
 		panic("DiscOptions missing")
 	}
-	if candidates, err := Obtain(opts.Discovery); err != nil {
+	if candidates, err := obtain(opts.Discovery); err != nil {
 		log.WithFields(log.Fields{"err": err}).Warning("Srv")
 		opts.To = make([]string, 0)
 	} else {
@@ -212,7 +212,7 @@ func Srv(c ctx.Context, opts *ConnOptions) error {
 	if err != nil {
 		return err // something bad happend to Accepter
 	}
-	newNodes, wstp := Watch(c, opts.Discovery) // spawn Watcher
+	newNodes, wstp := watch(c, opts.Discovery) // spawn Watcher
 	defer func() { _, _ = <-astp, <-wstp }()
 
 	log.WithFields(log.Fields{"from": opts.From}).Debug("SRV start")
@@ -257,7 +257,7 @@ func ClusterSrv(c ctx.Context, opts *ConnOptions) error {
 	if opts.Discovery == nil {
 		panic("DiscOptions missing")
 	}
-	if candidates, err := Obtain(opts.Discovery); err != nil {
+	if candidates, err := obtain(opts.Discovery); err != nil {
 		log.WithFields(log.Fields{"err": err}).Warning("ClusterSrv")
 		opts.To = make([]string, 0)
 	} else {
@@ -267,7 +267,7 @@ func ClusterSrv(c ctx.Context, opts *ConnOptions) error {
 		log.WithFields(log.Fields{"err": ErrClusterNodeMismatch}).Warning("ClusterSrv")
 	}
 
-	newNodes, wstp := Watch(c, opts.Discovery) // spawn Watcher
+	newNodes, wstp := watch(c, opts.Discovery) // spawn Watcher
 	defer func() { <-wstp }()
 
 	for yay := true; yay; {

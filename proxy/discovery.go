@@ -1,6 +1,8 @@
 package proxy
 
 import (
+	disc "github.com/jeffjen/go-discovery"
+
 	log "github.com/Sirupsen/logrus"
 	etcd "github.com/coreos/etcd/client"
 	ctx "golang.org/x/net/context"
@@ -12,27 +14,7 @@ var (
 	retry = &Backoff{}
 )
 
-func NewKeysAPI(cfg etcd.Config) (etcd.KeysAPI, error) {
-	eCli, err := etcd.New(cfg)
-	if err != nil {
-		return nil, err
-	}
-	return etcd.NewKeysAPI(eCli), nil
-}
-
-func NewWatcher(cfg etcd.Config, key string, index uint64) (etcd.Watcher, error) {
-	kAPI, err := NewKeysAPI(cfg)
-	if err != nil {
-		return nil, err
-	}
-	watcher := kAPI.Watcher(key, &etcd.WatcherOptions{
-		AfterIndex: index,
-		Recursive:  true,
-	})
-	return watcher, nil
-}
-
-func doWatch(c ctx.Context, watcher etcd.Watcher) <-chan bool {
+func watchWorker(c ctx.Context, watcher etcd.Watcher, key string) <-chan bool {
 	v := make(chan bool)
 	go func() {
 		evt, err := watcher.Next(c)
@@ -44,7 +26,11 @@ func doWatch(c ctx.Context, watcher etcd.Watcher) <-chan bool {
 			retry.Reset()
 			log.WithFields(log.Fields{"Action": evt.Action, "Key": evt.Node.Key}).Debug("key space event")
 			if evt.Action == "set" || evt.Action == "expire" || evt.Action == "delete" {
-				v <- true
+				if key == path.Dir(evt.Node.Key) {
+					v <- true
+				} else {
+					v <- false
+				}
 			} else {
 				v <- false
 			}
@@ -57,7 +43,7 @@ func obtainWorker(o chan<- []string, d *DiscOptions) chan<- bool {
 	order := make(chan bool, 8)
 	go func() {
 		for _ = range order {
-			nodes, err := Obtain(d)
+			nodes, err := obtain(d)
 			if err != nil {
 				log.WithFields(log.Fields{"err": err}).Debug("watch")
 				o <- nil
@@ -69,12 +55,16 @@ func obtainWorker(o chan<- []string, d *DiscOptions) chan<- bool {
 	return order
 }
 
-func Watch(c ctx.Context, d *DiscOptions) (output <-chan []string, stop <-chan struct{}) {
+func watch(c ctx.Context, d *DiscOptions) (output <-chan []string, stop <-chan struct{}) {
 	o, s := make(chan []string), make(chan struct{})
 	go func() {
 		defer close(s)
-		cfg := etcd.Config{Endpoints: d.Endpoints}
-		watcher, err := NewWatcher(cfg, d.Service, d.AfterIndex)
+		watcher, err := disc.NewWatcher(&disc.WatcherOptions{
+			Config:     etcd.Config{Endpoints: d.Endpoints},
+			Key:        d.Service,
+			AfterIndex: d.AfterIndex,
+			Recursive:  true,
+		})
 		if err != nil {
 			log.WithFields(log.Fields{"err": err}).Warning("watch")
 			return
@@ -82,7 +72,7 @@ func Watch(c ctx.Context, d *DiscOptions) (output <-chan []string, stop <-chan s
 		order := obtainWorker(o, d)
 		defer close(order)
 		for yay := true; yay; {
-			v := doWatch(c, watcher)
+			v := watchWorker(c, watcher, d.Service)
 			select {
 			case <-c.Done():
 				yay = false
@@ -98,9 +88,9 @@ func Watch(c ctx.Context, d *DiscOptions) (output <-chan []string, stop <-chan s
 	return
 }
 
-func Obtain(d *DiscOptions) ([]string, error) {
+func obtain(d *DiscOptions) ([]string, error) {
 	cfg := etcd.Config{Endpoints: d.Endpoints}
-	kAPI, err := NewKeysAPI(cfg)
+	kAPI, err := disc.NewKeysAPI(cfg)
 	if err != nil {
 		return nil, err
 	}
