@@ -4,15 +4,15 @@
 [![Build Status](https://travis-ci.org/jeffjen/go-proxy.svg)](https://travis-ci.org/jeffjen/go-proxy)
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jeffjen/go-proxy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-A simple proxy implementation for the mondern day
+A simple proxy implementation for the modern day
 
-This project aims to produce a programable proxy to facilitate the
+This project aims to produce a programmable proxy to facilitate the
 **Ambassador** pattern.  Find out more about [running an Ambassador in micro
 service deployment](https://github.com/jeffjen/ambd)
 
 *go-proxy* strives to achieve the following goals
 - To be not complicated
-- Code is the docuementation
+- Code is the documentation
 - Exist as a standalone program and a library for proxy
 - Interface with discovery backend
 - Be as lean as possible
