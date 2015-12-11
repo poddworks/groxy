@@ -2,6 +2,7 @@
 [![license](http://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/jeffjen/go-libkv/master/LICENSE)
 [![GoDoc](https://godoc.org/github.com/jeffjen/go-proxy/proxy?status.png)](https://godoc.org/github.com/jeffjen/go-proxy/proxy)
 [![Build Status](https://travis-ci.org/jeffjen/go-proxy.svg)](https://travis-ci.org/jeffjen/go-proxy)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jeffjen/go-proxy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 A simple proxy implementation for the mondern day
 
