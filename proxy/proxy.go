@@ -109,7 +109,7 @@ func balanceTo(newConn <-chan net.Conn, c ctx.Context, opts *ConnOptions) {
 // Review https://godoc.org/golang.org/x/net/context for understanding the
 // control flow.
 func To(c ctx.Context, opts *ConnOptions) error {
-	newConn, astp, err := AcceptWorker(c, opts.Net, opts.From) // spawn Accepter
+	newConn, astp, err := acceptWorker(c, opts.Net, opts.From) // spawn Accepter
 	if err != nil {
 		return err // something bad happend to Accepter
 	}
@@ -208,7 +208,7 @@ func Srv(c ctx.Context, opts *ConnOptions) error {
 	} else {
 		opts.To = candidates
 	}
-	newConn, astp, err := AcceptWorker(c, opts.Net, opts.From) // spawn Accepter
+	newConn, astp, err := acceptWorker(c, opts.Net, opts.From) // spawn Accepter
 	if err != nil {
 		return err // something bad happend to Accepter
 	}

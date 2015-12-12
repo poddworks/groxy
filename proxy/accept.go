@@ -38,11 +38,11 @@ func accept(ln net.Listener) (conn <-chan net.Conn) {
 	return connChan
 }
 
-// AcceptWorker takes a net.Listener and starts Accept
+// acceptWorker takes a net.Listener and starts Accept
 // In place spawn goroutine
 // Accepted connections are reported to newConn
-// expect stop channel to close when AcceptWorker terminates
-func AcceptWorker(c ctx.Context, network, addr string) (newConn <-chan net.Conn, stop <-chan struct{}, err error) {
+// expect stop channel to close when acceptWorker terminates
+func acceptWorker(c ctx.Context, network, addr string) (newConn <-chan net.Conn, stop <-chan struct{}, err error) {
 	ln, err := newListener(c, network, addr)
 	if err != nil {
 		return
