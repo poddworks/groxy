@@ -36,17 +36,32 @@ deployment](https://github.com/jeffjen/ambd)
 
 ### Behavior
 The proxy module does not attempt to perform reconnection to remote endpoint.
-The rule is fail fast retry.
 
-When connected with a discovery backend, nodes are registered under a key e.g.
-`/srv/redis/debug`,
-with the last segment being the actual netloc of the node in that service i.e.
-`/srv/redis/debug/10.0.1.134:6379`, `/srv/redis/debug/10.0.2.122:6379`.
+The discovery backend chosen is etcd https://github.com/coreos/etcd
 
-When members in the `/srv/redis/debug` service changes e.g. leaving,
-joining, the proxy will reject established connections (if not already
-broken from the view point of connected client).
+Layout for the discovery backend should look like the following:
+```
+/srv/redis/debug
+/srv/redis/debug/10.0.1.134:6379
+/srv/redis/debug/10.0.2.15:6379
+/srv/redis/debug/10.0.3.41:6379
+```
+
+When nodes' state in service `/srv/redis/debug` changes e.g. leaving or joining,
+the proxy will attempt to obtain a new set of nodes, followed by a reset on
+established connections.
+
+Proxy behaviors can be divided into two modes: ordered, or round-robin.
+
+In ordered mode:
+- the first remote host is attempted
+- then second
+- until all were tried, the proxy declare connection failed.
+
+In round-robin node
+- connections are spread among available candidates.
+- no ordered retry
 
 ### Documentaion
-GoDoc available: https://godoc.org/github.com/jeffjen/go-proxy/proxy
+GoDoc available: https://godoc.org/github.com/jeffjen/go-proxy
 
