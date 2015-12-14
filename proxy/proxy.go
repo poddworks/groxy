@@ -15,6 +15,7 @@ func init() {
 	LogLevel(os.Getenv("LOG_LEVEL"))
 }
 
+// LogLevel sets logging level of go-proxy runtime
 func LogLevel(level string) {
 	switch level {
 	case "DEBUG":
@@ -42,28 +43,51 @@ func LogLevel(level string) {
 }
 
 var (
+	// Proxy session ended.
 	ErrProxyEnd = errors.New("proxy end")
 
-	ErrClusterNotEnoughNodes = errors.New("candidate less then asked")
-
+	// Requested cluster node, but source and destination count does not match
 	ErrClusterNodeMismatch = errors.New("Origin and target count mismatch")
+
+	// Requested cluster mode, but I cannot find enough nodes to cluster to
+	ErrClusterNotEnoughNodes = errors.New("candidate less then asked")
 )
 
 // ConnOptions defines how the proxy should behave
 type ConnOptions struct {
-	Net          string
-	From         string
-	FromRange    []string
-	To           []string
-	Discovery    *DiscOptions
-	ReadTimeout  time.Duration
+	// Type of network transport
+	// See https://godoc.org/net
+	Net string
+
+	// Listening origin
+	From string
+	// Listening origin list for cluster mode
+	FromRange []string
+
+	// Balacnce forwarding host using round robin
+	Balance bool
+	// List of forwarding host
+	To []string
+
+	// Discovery backend setting
+	Discovery *DiscOptions
+
+	// Read timeout
+	ReadTimeout time.Duration
+
+	// Write timeout
 	WriteTimeout time.Duration
-	Balance      bool
 }
 
 type DiscOptions struct {
-	Service    string
-	Endpoints  []string
+	// Service key to registered host
+	Service string
+
+	// Discovery host netloc
+	Endpoints []string
+
+	// etcd index for event propagation
+	// See https://godoc.org/github.com/coreos/etcd/client#WatcherOptions
 	AfterIndex uint64
 }
 
@@ -225,8 +249,13 @@ func Srv(c ctx.Context, opts *ConnOptions) error {
 	return ErrProxyEnd
 }
 
+// ClusterTo is a short hand to creating multiple connection endpoints.
+// Proxy behavior behaves like To, but each source endpoint maps to one
+// destination endpoint.
+// Instead of managing connections yourself, this function helps you to handle
+// connection as a group.
 func ClusterTo(c ctx.Context, opts *ConnOptions) error {
-	if len(opts.FromRange) > len(opts.To) {
+	if len(opts.FromRange) != len(opts.To) {
 		log.WithFields(log.Fields{"err": ErrClusterNodeMismatch}).Warning("ClusterTo")
 	}
 	var wg sync.WaitGroup
@@ -253,6 +282,12 @@ func ClusterTo(c ctx.Context, opts *ConnOptions) error {
 	return ErrProxyEnd
 }
 
+// ClusterSrv is a short hand to creating multiple connection endpoints by
+// service key.
+// Proxy behavior behaves like Srv, but each source endpoint maps to one
+// destination endpoint.
+// Instead of managing connections yourself, this function helps you to handle
+// connection as a group.
 func ClusterSrv(c ctx.Context, opts *ConnOptions) error {
 	if opts.Discovery == nil {
 		panic("DiscOptions missing")
@@ -263,7 +298,7 @@ func ClusterSrv(c ctx.Context, opts *ConnOptions) error {
 	} else {
 		opts.To = candidates
 	}
-	if len(opts.FromRange) > len(opts.To) {
+	if len(opts.FromRange) != len(opts.To) {
 		log.WithFields(log.Fields{"err": ErrClusterNodeMismatch}).Warning("ClusterSrv")
 	}
 

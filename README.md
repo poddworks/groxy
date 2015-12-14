@@ -47,3 +47,6 @@ When members in the `/srv/redis/debug` service changes e.g. leaving,
 joining, the proxy will reject established connections (if not already
 broken from the view point of connected client).
 
+### Documentaion
+GoDoc available: https://godoc.org/github.com/jeffjen/go-proxy/proxy
+
