@@ -5,7 +5,7 @@
 [![GoDoc](https://godoc.org/github.com/jeffjen/go-proxy/proxy?status.png)](https://godoc.org/github.com/jeffjen/go-proxy/proxy)
 [![Build Status](https://travis-ci.org/jeffjen/go-proxy.svg)](https://travis-ci.org/jeffjen/go-proxy)
 
-A simple proxy implementation for the mondern day
+A simple proxy implementation for the modern day
 
 This project aims to produce a programmable proxy to facilitate **Ambassador**
 pattern.  Find out more about [Ambassador in micro service
