@@ -1,9 +1,11 @@
 package proxy_test
 
 import (
+	"github.com/jeffjen/go-proxy/proxy"
+
 	ctx "golang.org/x/net/context"
+
 	"log"
-	"proxy"
 )
 
 /*
@@ -18,7 +20,7 @@ func ExampleTo_static() {
 		Balance: true,
 	}
 
-	context, cancel := ctx.WithCancel(ctx.Backgroud())
+	context, cancel := ctx.WithCancel(ctx.Background())
 	defer cancel()
 
 	err := proxy.To(context, pxyOpts)
@@ -46,7 +48,7 @@ func ExampleSrv_discovery() {
 		},
 	}
 
-	context, cancel := ctx.WithCancel(ctx.Backgroud())
+	context, cancel := ctx.WithCancel(ctx.Background())
 	defer cancel()
 
 	err := proxy.Srv(context, pxyOpts)
@@ -66,9 +68,44 @@ func ExampleClusterTo_cluster() {
 		Balance:   true,
 	}
 
-	context, cancel := ctx.WithCancel(ctx.Backgroud())
+	context, cancel := ctx.WithCancel(ctx.Background())
 	defer cancel()
 
 	err := proxy.ClusterTo(context, pxyOpts)
+	log.Warning(err)
+}
+
+/*
+Create a proxy that encrypts outbound connection to TLS enabled endpoint
+*/
+func ExampleLoadCertificate() {
+	tlscfg, err := proxy.LoadCertificate(proxy.CertOptions{
+		"ca.pem",
+		"cert.pem",
+		"key.pem",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// prepare proxy option with TLS enabled
+	pxyOpts := &proxy.ConnOptions{
+		// Conneciton initiator does not encrypt data
+		Net:  "tcp4",
+		From: ":6379",
+
+		// destination endpoint must accept TLS encrypted data
+		To: []string{"10.0.0.12:6379"},
+
+		// instructs go-proxy to establish TLS connection with config
+		TLSConfig: proxy.TLSConfig{
+			Client: tlscfg,
+		},
+	}
+
+	context, cancel := ctx.WithCancel(ctx.Background())
+	defer cancel()
+
+	err := proxy.To(context, pxyOpts)
 	log.Warning(err)
 }

@@ -4,7 +4,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	ctx "golang.org/x/net/context"
 
+	"crypto/tls"
 	"net"
+	"reflect"
 	"time"
 )
 
@@ -15,6 +17,8 @@ type connOrder struct {
 	to  []string
 	rd  time.Duration
 	wd  time.Duration
+
+	tlscfg *tls.Config
 }
 
 // handleConn establishes pipeline between the request party and the intended
@@ -27,27 +31,34 @@ func handleConn(c ctx.Context, work *connOrder) {
 
 		dst net.Conn
 		err error
+
+		cert *tls.Config = work.tlscfg
+
+		logger = log.WithFields(log.Fields{"-src": src.RemoteAddr(), "+src": src.LocalAddr(), "tls": cert != nil})
 	)
 
 	for _, addr := range to {
-		dst, err = net.Dial(network, addr)
+		if cert == nil {
+			dst, err = net.Dial(network, addr)
+		} else {
+			dst, err = tls.Dial(network, addr, cert)
+		}
 		if err == nil {
 			break
 		}
 	}
-	if dst == nil {
-		log.WithFields(log.Fields{"+src": src.LocalAddr(), "-src": src.RemoteAddr()}).Debug("failed")
+	if reflect.ValueOf(dst).IsNil() {
+		logger.Debug("failed")
 		src.Close()
 		return
+	} else {
+		logger = logger.WithFields(log.Fields{"dst": dst.RemoteAddr()})
 	}
 
 	var (
-		io = NewCopyIO()
-
+		io  = NewCopyIO()
 		one = make(chan struct{})
 		two = make(chan struct{})
-
-		f = log.Fields{"+src": src.LocalAddr(), "-src": src.RemoteAddr(), "dst": dst.RemoteAddr()}
 	)
 
 	io.ReadDeadline(work.rd)
@@ -63,7 +74,7 @@ func handleConn(c ctx.Context, work *connOrder) {
 		io.Copy(src, dst)
 	}()
 
-	log.WithFields(f).Debug("enter")
+	logger.Debug("enter")
 	for oy, ty := true, true; oy || ty; {
 		select {
 		case <-one:
@@ -75,5 +86,5 @@ func handleConn(c ctx.Context, work *connOrder) {
 			dst.Close()
 		}
 	}
-	log.WithFields(f).Debug("leave")
+	logger.Debug("leave")
 }

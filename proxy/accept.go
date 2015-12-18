@@ -4,19 +4,36 @@ import (
 	log "github.com/Sirupsen/logrus"
 	ctx "golang.org/x/net/context"
 
+	"crypto/tls"
 	"net"
 )
 
-func newListener(c ctx.Context, network, addr string) (net.Listener, error) {
-	var retry = &Backoff{}
+// config holds network type, address, and tls info
+type config struct {
+	network string
+	addr    string
+	tlscfg  *tls.Config
+}
+
+func newListener(c ctx.Context, cfg *config) (net.Listener, error) {
+	var (
+		logger = log.WithFields(log.Fields{"net": cfg.network, "from": cfg.addr, "tls": cfg.tlscfg != nil})
+
+		retry = &Backoff{}
+	)
 	for {
 		select {
 		default:
-			ln, err := net.Listen(network, addr)
+			ln, err := net.Listen(cfg.network, cfg.addr)
 			if err != nil {
-				log.WithFields(log.Fields{"net": network, "from": addr, "err": err}).Warning("listen")
+				logger.WithFields(log.Fields{"err": err}).Warning("listen")
 				retry.Delay()
 			} else {
+				// Upgrade connection to TLS if config available
+				if cfg.tlscfg != nil {
+					ln = tls.NewListener(ln, cfg.tlscfg)
+				}
+				logger.Debug("listen")
 				return ln, nil
 			}
 		case <-c.Done():
@@ -42,8 +59,8 @@ func accept(ln net.Listener) (conn <-chan net.Conn) {
 // In place spawn goroutine
 // Accepted connections are reported to newConn
 // expect stop channel to close when acceptWorker terminates
-func acceptWorker(c ctx.Context, network, addr string) (newConn <-chan net.Conn, stop <-chan struct{}, err error) {
-	ln, err := newListener(c, network, addr)
+func acceptWorker(c ctx.Context, cfg *config) (newConn <-chan net.Conn, stop <-chan struct{}, err error) {
+	ln, err := newListener(c, cfg)
 	if err != nil {
 		return
 	}

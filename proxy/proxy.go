@@ -4,6 +4,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	ctx "golang.org/x/net/context"
 
+	"crypto/tls"
 	"errors"
 	"net"
 	"os"
@@ -53,6 +54,14 @@ var (
 	ErrClusterNotEnoughNodes = errors.New("candidate less then asked")
 )
 
+type TLSConfig struct {
+	// If non nil Client enables sending of TLS encrypted data
+	Client *tls.Config
+
+	// If non nil Server enables receiving TLS encrypted data
+	Server *tls.Config
+}
+
 // ConnOptions defines how the proxy should behave
 type ConnOptions struct {
 	// Type of network transport
@@ -68,6 +77,9 @@ type ConnOptions struct {
 	Balance bool
 	// List of forwarding host
 	To []string
+
+	// TLS config
+	TLSConfig TLSConfig
 
 	// Discovery backend setting
 	Discovery *DiscOptions
@@ -102,6 +114,7 @@ func runTo(newConn <-chan net.Conn, c ctx.Context, opts *ConnOptions) {
 				opts.To,
 				opts.ReadTimeout,
 				opts.WriteTimeout,
+				opts.TLSConfig.Client,
 			})
 		case <-c.Done():
 			yay = false
@@ -120,6 +133,7 @@ func balanceTo(newConn <-chan net.Conn, c ctx.Context, opts *ConnOptions) {
 				opts.To[r : r+1],
 				opts.ReadTimeout,
 				opts.WriteTimeout,
+				opts.TLSConfig.Client,
 			})
 		case <-c.Done():
 			yay = false
@@ -133,7 +147,11 @@ func balanceTo(newConn <-chan net.Conn, c ctx.Context, opts *ConnOptions) {
 // Review https://godoc.org/golang.org/x/net/context for understanding the
 // control flow.
 func To(c ctx.Context, opts *ConnOptions) error {
-	newConn, astp, err := acceptWorker(c, opts.Net, opts.From) // spawn Accepter
+	newConn, astp, err := acceptWorker(c, &config{
+		opts.Net,
+		opts.From,
+		opts.TLSConfig.Server,
+	})
 	if err != nil {
 		return err // something bad happend to Accepter
 	}
@@ -173,6 +191,7 @@ func runSrv(newConn <-chan net.Conn, newNodes <-chan []string, c ctx.Context, op
 					opts.To,
 					opts.ReadTimeout,
 					opts.WriteTimeout,
+					opts.TLSConfig.Client,
 				})
 				connList = append(connList, abort)
 			}
@@ -206,6 +225,7 @@ func balacnceSrv(newConn <-chan net.Conn, newNodes <-chan []string, c ctx.Contex
 					opts.To[r : r+1],
 					opts.ReadTimeout,
 					opts.WriteTimeout,
+					opts.TLSConfig.Client,
 				})
 				connList = append(connList, abort)
 			}
@@ -232,7 +252,11 @@ func Srv(c ctx.Context, opts *ConnOptions) error {
 	} else {
 		opts.To = candidates
 	}
-	newConn, astp, err := acceptWorker(c, opts.Net, opts.From) // spawn Accepter
+	newConn, astp, err := acceptWorker(c, &config{
+		opts.Net,
+		opts.From,
+		opts.TLSConfig.Server,
+	})
 	if err != nil {
 		return err // something bad happend to Accepter
 	}
@@ -271,6 +295,7 @@ func ClusterTo(c ctx.Context, opts *ConnOptions) error {
 				Net:          opts.Net,
 				From:         from,
 				To:           to,
+				TLSConfig:    opts.TLSConfig,
 				ReadTimeout:  opts.ReadTimeout,
 				WriteTimeout: opts.WriteTimeout,
 			})
@@ -320,6 +345,7 @@ func ClusterSrv(c ctx.Context, opts *ConnOptions) error {
 					Net:          opts.Net,
 					From:         from,
 					To:           to,
+					TLSConfig:    opts.TLSConfig,
 					ReadTimeout:  opts.ReadTimeout,
 					WriteTimeout: opts.WriteTimeout,
 				})

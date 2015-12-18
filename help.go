@@ -12,15 +12,16 @@ func init() {
 Options:
 	{{range .Flags}}{{.}}
 	{{end}}
+Commands:
+	{{range .Commands}}{{.Name}}{{ "\t " }}{{.Usage}}
+	{{end}}
+`
+	cli.CommandHelpTemplate = `Usage: {{.Name}} {{if .Flags}}[OPTIONS]{{else if .ArgsUsage}}[CONFIG_KEY]{{end}}
 
-Balance request between two redis node (READ ONLY)
-	{{.Name}} --src :16379 --dst 127.0.0.1:6379 --dst 127.0.0.1:6380 --lb
+{{.Usage}}
 
-Proxy to targets by service key name
-	{{.Name}} --src :27017 --srv /srv/mongodb/debug --dsc http://localhost:2379
-
-Many to many proxy
-	{{.Name}} --src :37017 --src :37018 --dst localhost:27017 --dst localhost:27018
-
+Options:
+	{{range .Flags}}{{.}}
+	{{end}}
 `
 }

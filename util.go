@@ -5,73 +5,54 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	ctx "golang.org/x/net/context"
+
+	"errors"
 )
 
-type info struct {
-	Net       string   `json:"net"`
-	From      string   `json:"src"`
-	FromRange []string `json:"range"`
+func listen(wk ctx.Context, opts *proxy.ConnOptions) (halt <-chan struct{}) {
+	var err error
 
-	// static assignment
-	To []string `json:"dst,omitempty"`
-
-	// read from discovery
-	Endpoints []string `json:"dsc,omitempty"`
-	Service   string   `json:"srv,omitempty"`
-
-	// balance connection request by origins
-	Balance bool `json:"robin"`
-}
-
-func listen(wk ctx.Context, meta *info) (halt <-chan struct{}) {
 	ending := make(chan struct{}, 1)
 	go func() {
 		defer close(ending)
-
-		var err error
-
 		logger := log.WithFields(log.Fields{
-			"Net":       meta.Net,
-			"From":      meta.From,
-			"FromRange": meta.FromRange,
-			"To":        meta.To,
-			"Endpoints": meta.Endpoints,
-			"Service":   meta.Service,
-			"Balance":   meta.Balance,
+			"Net":     opts.Net,
+			"To":      opts.To,
+			"Balance": opts.Balance,
 		})
-
+		if len(opts.FromRange) > 0 {
+			logger = logger.WithFields(log.Fields{
+				"FromRange": opts.FromRange,
+			})
+		} else {
+			logger = logger.WithFields(log.Fields{
+				"From": opts.From,
+			})
+		}
+		if opts.Discovery != nil {
+			logger = logger.WithFields(log.Fields{
+				"Endpoints": opts.Discovery.Endpoints,
+				"Service":   opts.Discovery.Service,
+			})
+		}
 		logger.Info("begin")
-		if meta.Service != "" && len(meta.Endpoints) != 0 {
-			opts := &proxy.ConnOptions{
-				Net:     meta.Net,
-				Balance: meta.Balance,
-				Discovery: &proxy.DiscOptions{
-					Service:   meta.Service,
-					Endpoints: meta.Endpoints,
-				},
-			}
-			if len(meta.FromRange) == 0 {
-				opts.From = meta.From
+		if opts.Discovery != nil {
+			if len(opts.FromRange) == 0 {
 				err = proxy.Srv(wk, opts)
 			} else {
-				opts.FromRange = meta.FromRange
 				err = proxy.ClusterSrv(wk, opts)
 			}
-		} else if len(meta.To) != 0 {
-			opts := &proxy.ConnOptions{
-				Net:     meta.Net,
-				To:      meta.To,
-				Balance: meta.Balance,
-			}
-			if len(meta.FromRange) == 0 {
-				opts.From = meta.From
+		} else if len(opts.To) != 0 {
+			if len(opts.FromRange) == 0 {
 				err = proxy.To(wk, opts)
 			} else {
-				opts.FromRange = meta.FromRange
 				err = proxy.ClusterTo(wk, opts)
 			}
+		} else {
+			err = errors.New("Misconfigured connect options")
 		}
 		logger.WithFields(log.Fields{"err": err}).Warning("end")
+
 	}()
 	return ending
 }

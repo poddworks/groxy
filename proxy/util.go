@@ -3,6 +3,10 @@ package proxy
 import (
 	log "github.com/Sirupsen/logrus"
 
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
+	"io/ioutil"
 	"time"
 )
 
@@ -10,8 +14,8 @@ const (
 	MAX_BACKOFF_DELAY = 2 * time.Second
 )
 
-// Backoff provides stepped delay on each failed attempts.  It is hard coded to
-// cap the delay at 2 seconds.
+// Backoff provides stepped delay on each failed attempts.  Maximum delay time
+// is capped off at 2 seconds.
 type Backoff struct {
 	attempts int64
 }
@@ -42,4 +46,56 @@ func (b *Backoff) Reset() {
 // Attempts reports current failed attempts
 func (b *Backoff) Attempts() int64 {
 	return b.attempts
+}
+
+func loadCertCommon(ca, tlscert, tlskey string) ([]tls.Certificate, *x509.CertPool, error) {
+	cert, err := tls.LoadX509KeyPair(tlscert, tlskey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ca_data, err := ioutil.ReadFile(ca)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(ca_data) {
+		return nil, nil, errors.New("Unable to process CA chain data")
+	}
+
+	return []tls.Certificate{cert}, pool, nil
+}
+
+// CertOptions provides specification to path of certificate and whether this
+// is for listening server or connecting client
+type CertOptions struct {
+	// Certificate path information
+	CA      string
+	TlsCert string
+	TlsKey  string
+
+	// Setup tls.Config so we are listening server, otherwise we are connecting
+	// client
+	Server bool
+}
+
+// LoadCertificate reads CA cert chain, Private, and Public key and
+// returns tls.Config object for creating TLS listener.
+// The default authentication rule is to verify cert key pair.
+func LoadCertificate(opts CertOptions) (*tls.Config, error) {
+	certs, pool, err := loadCertCommon(opts.CA, opts.TlsCert, opts.TlsKey)
+	if err != nil {
+		return nil, err
+	}
+	cfg := &tls.Config{
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		Certificates: certs,
+	}
+	if opts.Server {
+		cfg.ClientCAs = pool
+	} else {
+		cfg.RootCAs = pool
+	}
+	return cfg, nil
 }

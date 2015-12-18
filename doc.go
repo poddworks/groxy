@@ -23,11 +23,16 @@ A full implementation for a configurable Ambassador daemon ambd https://github.c
 			--help, -h                              show help
 			--version, -v                           print the version
 
+	Commands:
+			tls-client       Setup client encrypt mode
+			tls-server       Setup server encrypt mode
+			help             Shows a list of commands or help for one command
+
 Running with static candidates:
 	go-proxy --src :16379 --dst 10.0.3.144:6379
 
 Running with static candidates and round robin balance:
-	go-proxy --src :16379 -lb \
+	go-proxy --src :16379 --lb \
 		--dst 10.0.0.12:6379 --dst 10.0.1.123:6379
 
 Running with discovery backend:
@@ -38,5 +43,16 @@ Running with discovery backend:
 Running in cluster mode:
 	go-proxy --src :16379 --src :16378 \
 		--dst 10.0.0.12:6379 --dst 10.0.1.123:6379
+
+Adding TLS encryption to your connection
+	go-proxy tls-client \
+		--tlscacert ca.pem --tlskey key.pem --tlscert cert.pem \
+		--src :16379 --dst 10.0.3.144:6379
+
+Setting up TLS proxy server
+	go-proxy tls-server \
+		--tlscacert ca.pem --tlskey key.pem --tlscert cert.pem \
+		--src :16379 --dst 10.0.3.144:6379
+
 */
 package main

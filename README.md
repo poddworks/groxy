@@ -16,6 +16,7 @@ deployment](https://github.com/jeffjen/ambd)
 - Code is the docuementation
 - Exist as a standalone program and a library for proxy
 - Interface with discovery backend
+- Tunnel your data with TLS connection.
 - Be as lean as possible
 
 ### Import go-proxy as library
@@ -32,6 +33,18 @@ deployment](https://github.com/jeffjen/ambd)
     go-proxy --dsc http://etcd0:2379 --dsc http://etcd1:2379 \
         --src :16379 \
         --srv /srv/redis/debug
+    ```
+
+- Adding TLS encryption to your connection
+    ```
+    go-proxy tls-client --tlscacert ca.pem --tlskey key.pem --tlscert cert.pem \
+        --src :16379 --dst 10.0.3.144:6379
+    ```
+
+- Setting up TLS proxy server
+    ```
+    go-proxy tls-server --tlscacert ca.pem --tlskey key.pem --tlscert cert.pem \
+        --src :6379 --dst 10.0.3.144:6379
     ```
 
 ### Behavior
