@@ -47,7 +47,7 @@ func handleConn(c ctx.Context, work *connOrder) {
 			break
 		}
 	}
-	if reflect.ValueOf(dst).IsNil() {
+	if val := reflect.ValueOf(dst); !val.IsValid() || val.IsNil() {
 		logger.Debug("failed")
 		src.Close()
 		return
