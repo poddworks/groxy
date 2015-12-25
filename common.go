@@ -33,6 +33,11 @@ var (
 	loadCertificate LoadCertFunc = noop
 )
 
+func SetLoglevel(c *cli.Context) error {
+	proxy.LogLevel(c.String("loglevel"))
+	return nil
+}
+
 func Proxy(c *cli.Context) {
 	var (
 		Net = c.String("net")
@@ -44,8 +49,6 @@ func Proxy(c *cli.Context) {
 
 		cert = loadCertificate(c)
 	)
-
-	proxy.LogLevel(c.String("loglevel"))
 
 	trigger := make(chan os.Signal, 1)
 	signal.Notify(trigger, os.Interrupt, os.Kill)

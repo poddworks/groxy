@@ -52,6 +52,7 @@ func NewTlsClientCommand() cli.Command {
 		Usage: "Setup client encrypt mode",
 		Flags: append(common, certflags...),
 		Before: func(c *cli.Context) error {
+			SetLoglevel(c)
 			tlscacert, tlscert, tlskey := preprocess(c)
 			opts := proxy.CertOptions{
 				CA:      tlscacert,
@@ -78,6 +79,7 @@ func NewTlsServerCommand() cli.Command {
 		Usage: "Setup server encrypt mode",
 		Flags: append(common, certflags...),
 		Before: func(c *cli.Context) error {
+			SetLoglevel(c)
 			tlscacert, tlscert, tlskey := preprocess(c)
 			opts := proxy.CertOptions{
 				CA:      tlscacert,

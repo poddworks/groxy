@@ -25,6 +25,7 @@ func main() {
 		NewTlsClientCommand(),
 		NewTlsServerCommand(),
 	}
+	app.Before = SetLoglevel
 	app.Action = Proxy
 	app.Run(os.Args)
 }
