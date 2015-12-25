@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"io/ioutil"
+	"net/url"
 	"time"
 )
 
@@ -48,7 +49,7 @@ func (b *Backoff) Attempts() int64 {
 	return b.attempts
 }
 
-func loadCertCommon(ca, tlscert, tlskey string) ([]tls.Certificate, *x509.CertPool, error) {
+func loadCertFromFile(ca, tlscert, tlskey string) ([]tls.Certificate, *x509.CertPool, error) {
 	cert, err := tls.LoadX509KeyPair(tlscert, tlskey)
 	if err != nil {
 		return nil, nil, err
@@ -65,6 +66,47 @@ func loadCertCommon(ca, tlscert, tlskey string) ([]tls.Certificate, *x509.CertPo
 	}
 
 	return []tls.Certificate{cert}, pool, nil
+}
+
+func getfile(uri string) (p string, e error) {
+	u, err := url.Parse(uri)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Debug("getfile")
+		return "", err
+	}
+	logger := log.WithFields(log.Fields{"type": u.Scheme})
+	switch {
+	case u.Scheme == "" || u.Scheme == "file":
+		p, e = uri, nil
+		break
+	case u.Scheme == "s3" || u.Scheme == "s3":
+		p, e = "", errors.New("S3 not supported")
+		break
+	case u.Scheme == "http" || u.Scheme == "https":
+		p, e = "", errors.New("http/https not supported")
+		break
+	default:
+		p, e = "", errors.New("unexpected resource URI "+u.Scheme)
+		break
+	}
+	logger.WithFields(log.Fields{"uri": p, "err": e}).Debug("getfile")
+	return
+}
+
+func loadCertCommon(ca, tlscert, tlskey string) ([]tls.Certificate, *x509.CertPool, error) {
+	cafp, err := getfile(ca)
+	if err != nil {
+		return nil, nil, err
+	}
+	tlscertfp, err := getfile(tlscert)
+	if err != nil {
+		return nil, nil, err
+	}
+	tlskeyfp, err := getfile(tlskey)
+	if err != nil {
+		return nil, nil, err
+	}
+	return loadCertFromFile(cafp, tlscertfp, tlskeyfp)
 }
 
 // CertOptions provides specification to path of certificate and whether this
