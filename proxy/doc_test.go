@@ -80,8 +80,8 @@ Create a proxy that encrypts outbound connection to TLS enabled endpoint
 */
 func ExampleLoadCertificate() {
 	tlscfg, err := proxy.LoadCertificate(proxy.CertOptions{
-		"ca.pem",
-		"cert.pem",
+		"s3://devops.org/cert/ca.pem",
+		"file://cert.pem",
 		"key.pem",
 	})
 	if err != nil {

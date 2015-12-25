@@ -122,8 +122,15 @@ type CertOptions struct {
 	Server bool
 }
 
-// LoadCertificate reads CA cert chain, Private, and Public key and
-// returns tls.Config object for creating TLS listener.
+// LoadCertificate processes certificate resource for TLSConfg to consume.
+// Reads CA cert chain, Private, and Public key, then returns tls.Config.
+//
+// Supported URI:
+//		- Local file on disk (file://)
+// 		- Amazon Web Services S3 object (s3://)
+//
+// If left unspecified, URI is treated as if its a file reating on disk
+//
 // The default authentication rule is to verify cert key pair.
 func LoadCertificate(opts CertOptions) (*tls.Config, error) {
 	certs, pool, err := loadCertCommon(opts.CA, opts.TlsCert, opts.TlsKey)
