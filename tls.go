@@ -13,7 +13,7 @@ import (
 var (
 	certflags = []cli.Flag{
 		// Certificate filepath with required keys
-		cli.StringFlag{Name: "tlscertpath", Usage: "Specify ", EnvVar: "GO_PROXY_CERTPATH"},
+		cli.StringFlag{Name: "tlscertpath", Usage: "Specify certificate path", EnvVar: "GO_PROXY_CERTPATH"},
 
 		// CA, Cert, and Key filepath
 		cli.StringFlag{Name: "tlscacert", Usage: "Trust certs signed only by this CA", EnvVar: "GO_PROXY_CA"},
