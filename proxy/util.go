@@ -80,7 +80,7 @@ func getfile(uri string) (p string, e error) {
 		p, e = uri, nil
 		break
 	case u.Scheme == "s3" || u.Scheme == "s3":
-		p, e = "", errors.New("S3 not supported")
+		p, e = news3cli().get(u)
 		break
 	case u.Scheme == "http" || u.Scheme == "https":
 		p, e = "", errors.New("http/https not supported")
