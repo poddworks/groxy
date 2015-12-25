@@ -23,28 +23,34 @@ deployment](https://github.com/jeffjen/ambd)
 `go get github.com/jeffjen/go-proxy/proxy`
 
 ### Running go-proxy as a standalone program
-- Running with static candidates:  
+- Running with static candidates:
     ```
     go-proxy --src :16379 --dst 10.0.3.144:6379
     ```
 
-- Running with discovery backend:  
+- Running with discovery backend:
     ```
-    go-proxy --dsc http://etcd0:2379 --dsc http://etcd1:2379 \
-        --src :16379 \
-        --srv /srv/redis/debug
+    go-proxy --src :16379 --srv /srv/redis/debug \
+        --dsc http://etcd0:2379 \
+        --dsc http://etcd1:2379
     ```
 
-- Adding TLS encryption to your connection
+- Add TLS encryption to your connection
     ```
-    go-proxy tls-client --tlscacert ca.pem --tlskey key.pem --tlscert cert.pem \
-        --src :16379 --dst 10.0.3.144:6379
+    go-proxy tls-client --src :16379 --dst 10.0.3.144:6379 \
+        --tlscertpath s3://devops.example.org/client-cert
+
+    go-proxy tls-client --src :16379 --dst 10.0.3.144:6379 \
+        --tlscertpath /path/to/client-cert
     ```
 
 - Setting up TLS proxy server
     ```
-    go-proxy tls-server --tlscacert ca.pem --tlskey key.pem --tlscert cert.pem \
-        --src :6379 --dst 10.0.3.144:6379
+    go-proxy tls-server --src :6379 --dst 10.0.3.144:6379 \
+        --tlscertpath s3://devops.example.org/server-cert
+
+    go-proxy tls-server --src :6379 --dst 10.0.3.144:6379 \
+        --tlscertpath /path/to/server-cert
     ```
 
 ### Behavior
