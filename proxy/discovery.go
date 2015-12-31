@@ -106,6 +106,6 @@ func obtain(d *DiscOptions) ([]string, error) {
 			to = append(to, path.Base(n.Key))
 		}
 	}
-	log.WithFields(log.Fields{"To": to}).Info("candidate")
+	log.WithFields(log.Fields{"To": to, "Service": d.Service}).Info("candidate")
 	return to, nil
 }
