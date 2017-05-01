@@ -30,6 +30,8 @@ func SetupAppMetaData(app *clii.App) {
 
 	app.Usage = "The TCP proxy with discovery service support"
 
+	app.Version = "0.2.6"
+
 	app.Authors = []clii.Author{
 		clii.Author{"Yi-Hung Jen", "yihungjen@gmail.com"},
 	}
