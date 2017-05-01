@@ -1,17 +1,12 @@
-# go-proxy
+# groxy
 
-[![Join the chat at https://gitter.im/jeffjen/go-proxy](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jeffjen/go-proxy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![license](http://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/jeffjen/go-libkv/master/LICENSE)
-[![GoDoc](https://godoc.org/github.com/jeffjen/go-proxy/proxy?status.png)](https://godoc.org/github.com/jeffjen/go-proxy/proxy)
-[![Build Status](https://travis-ci.org/jeffjen/go-proxy.svg)](https://travis-ci.org/jeffjen/go-proxy)
+[![GoDoc](https://godoc.org/github.com/jeffjen/groxy/proxy?status.png)](https://godoc.org/github.com/jeffjen/groxy/proxy)
+[![Build Status](https://travis-ci.org/jeffjen/groxy.svg)](https://travis-ci.org/jeffjen/groxy)
 
 A simple proxy implementation for the modern day
 
-This project aims to produce a programmable proxy to facilitate **Ambassador**
-pattern.  Find out more about [Ambassador in micro service
-deployment](https://github.com/jeffjen/ambd)
-
-*go-proxy* strives to achieve the following goals
+*groxy* strives to achieve the following goals
 - To be not complicated
 - Code is the docuementation
 - Exist as a standalone program and a library for proxy
@@ -19,37 +14,37 @@ deployment](https://github.com/jeffjen/ambd)
 - Tunnel your data with TLS connection.
 - Be as lean as possible
 
-### Import go-proxy as library
-`go get github.com/jeffjen/go-proxy/proxy`
+### Import groxy as library
+`go get github.com/jeffjen/groxy/proxy`
 
-### Running go-proxy as a standalone program
+### Running groxy as a standalone program
 - Running with static candidates:
     ```
-    go-proxy --src :16379 --dst 10.0.3.144:6379
+    groxy --src :16379 --dst 10.0.3.144:6379
     ```
 
 - Running with discovery backend:
     ```
-    go-proxy --src :16379 --srv /srv/redis/debug \
+    groxy --src :16379 --srv /srv/redis/debug \
         --dsc http://etcd0:2379 \
         --dsc http://etcd1:2379
     ```
 
 - Add TLS encryption to your connection
     ```
-    go-proxy tls-client --src :16379 --dst 10.0.3.144:6379 \
+    groxy tls-client --src :16379 --dst 10.0.3.144:6379 \
         --tlscertpath s3://devops.example.org/client-cert
 
-    go-proxy tls-client --src :16379 --dst 10.0.3.144:6379 \
+    groxy tls-client --src :16379 --dst 10.0.3.144:6379 \
         --tlscertpath /path/to/client-cert
     ```
 
 - Setting up TLS proxy server
     ```
-    go-proxy tls-server --src :6379 --dst 10.0.3.144:6379 \
+    groxy tls-server --src :6379 --dst 10.0.3.144:6379 \
         --tlscertpath s3://devops.example.org/server-cert
 
-    go-proxy tls-server --src :6379 --dst 10.0.3.144:6379 \
+    groxy tls-server --src :6379 --dst 10.0.3.144:6379 \
         --tlscertpath /path/to/server-cert
     ```
 
@@ -82,5 +77,5 @@ In round-robin node
 - no ordered retry
 
 ### Documentaion
-GoDoc available: https://godoc.org/github.com/jeffjen/go-proxy
+GoDoc available: https://godoc.org/github.com/jeffjen/groxy
 
