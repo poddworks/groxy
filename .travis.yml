@@ -1,26 +1,10 @@
 language: go
 
 go:
-    - 1.5.1
+    - 1.8.1
 
 env:
     - CGO_ENABLED=0 GOOS=linux
 
 script:
-    - go build -a -installsuffix cgo -o go-proxy
-
-deploy:
-    provider: releases
-    api_key:
-        secure: B6mYm75kmCYOsHLwu0gYqbFtbYSZ/L6Gi2UYMZnDUkg8vKWXy0YEW89i92I6FXFKECC3/8BFZ8pekAaITD/chfGbC2q7A/t+5QCRI6i8kgp5qfqSGuDs6ICX8yeJKsnzC35nSct45HVKM1cP01EWWmpTA3yTn7YXGTVozVXHlf70R6Vs437obIhk8FPL0LD6BSQsZ9RYlaF2e2IcDdDM0GbfQ867lMG305XeLpBEZ9KjhzAwQrDtPcX7+ksH+lMw0knLfz0hZ1GGQ1cCpZ921ybntpGKeM0gIXCGadomBo9MAXz2nOR8dly4AuhnWxpXJ6P4OojERm+kNmxkkY11Yay3Y69fW2kCOTrubwqr4BXl59c4txJzgxBRAx4YRYdD/NEaf11tGAOWAyb3LWJ61lmBF8BZg57LDkljB3JUoAKbhFx528PGGlsB8um17WmD3ehoJEmqbOWmuhea3yCsu3rAH6ZsHr2kQM3+pdQN/wdovr02Dony9+rvf/GCs1K5gev20ldlv9XgFW6RnoeWaMEymFotDTKXe4Zu04swCwrnLepc+v6zCPFhXnN9In0YSAJNkKRsq6cz7yiDzYs4RvNU+pEDTt0EwXcG7L5jA9adMHIhY8wM86owo7alPImHay9CgXTkp2HX6CnKeIXfhzEUkQDjaW9Wj6624yJE3No=
-    file: go-proxy
-    on:
-        tags: true
-
-notifications:
-    webhooks:
-        urls:
-            - https://webhooks.gitter.im/e/c50b273a12ca6655287b
-        on_success: change
-        on_failure: always
-        on_start: never
+    - go build -a -installsuffix cgo -o groxy ./cmd
