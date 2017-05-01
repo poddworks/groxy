@@ -3,30 +3,33 @@ Transport level proxy for the mondern day.
 
 The root package is provided as a standalone proxy app for verifying implementation detail.
 
-This project aims to produce a programmable proxy to facilitate Ambassador
-pattern: https://docs.docker.com/engine/articles/ambassador_pattern_linking/
+	NAME:
+	   groxy - The TCP proxy with discovery service support
 
-A full implementation for a configurable Ambassador daemon ambd https://github.com/jeffjen/ambd
+	USAGE:
+	   groxy [global options] command [command options] [arguments...]
 
-	Usage: groxy [OPTIONS]
+	VERSION:
+	   0.2.6
 
-	The TCP proxy with discovery service support
+	AUTHOR:
+	   Yi-Hung Jen <yihungjen@gmail.com>
 
-	Options:
-			--net "tcp4"                            Network type
-			--src [--src option --src option]       Origin address to listen
-			--dst [--dst option --dst option]       Target to proxy to
-			--dsc [--dsc option --dsc option]       Discovery service endpoint
-			--srv                                   Service identity in discovery
-			--lb                                    Weather we do load balance
-			--loglevel "INFO"                       Set debug level [$LOG_LEVEL]
-			--help, -h                              show help
-			--version, -v                           print the version
+	COMMANDS:
+	     tls-client  Setup client encrypt mode
+	     tls-server  Setup server encrypt mode
+	     help, h     Shows a list of commands or help for one command
 
-	Commands:
-			tls-client       Setup client encrypt mode
-			tls-server       Setup server encrypt mode
-			help             Shows a list of commands or help for one command
+	GLOBAL OPTIONS:
+	   --net value       Network type (default: "tcp4")
+	   --src value       Origin address to listen
+	   --dst value       Target to proxy to
+	   --dsc value       Discovery service endpoint
+	   --srv value       Service identity in discovery
+	   --lb              Weather we do load balance
+	   --loglevel value  Set debug level (default: "INFO") [$LOG_LEVEL]
+	   --help, -h        show help
+	   --version, -v     print the version
 
 Running with static candidates:
 	groxy --src :16379 --dst 10.0.3.144:6379
