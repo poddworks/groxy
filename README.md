@@ -1,8 +1,8 @@
 # groxy
 
-[![license](http://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/jeffjen/go-libkv/master/LICENSE)
-[![GoDoc](https://godoc.org/github.com/jeffjen/groxy/proxy?status.png)](https://godoc.org/github.com/jeffjen/groxy/proxy)
-[![Build Status](https://travis-ci.org/jeffjen/groxy.svg)](https://travis-ci.org/jeffjen/groxy)
+[![license](http://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/poddworks/groxy/master/LICENSE)
+[![GoDoc](https://godoc.org/github.com/poddworks/groxy/proxy?status.png)](https://godoc.org/github.com/poddworks/groxy/proxy)
+[![Build Status](https://travis-ci.org/poddworks/groxy.svg)](https://travis-ci.org/poddworks/groxy)
 
 A simple proxy implementation for the modern day
 
