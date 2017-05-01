@@ -77,5 +77,5 @@ In round-robin node
 - no ordered retry
 
 ### Documentaion
-GoDoc available: https://godoc.org/github.com/jeffjen/groxy
+GoDoc available: https://godoc.org/github.com/poddworks/groxy
 
