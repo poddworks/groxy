@@ -5,8 +5,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	etcd "github.com/coreos/etcd/client"
-	ctx "golang.org/x/net/context"
 
+	ctx "context"
 	"path"
 )
 

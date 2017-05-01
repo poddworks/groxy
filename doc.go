@@ -8,7 +8,7 @@ pattern: https://docs.docker.com/engine/articles/ambassador_pattern_linking/
 
 A full implementation for a configurable Ambassador daemon ambd https://github.com/jeffjen/ambd
 
-	Usage: go-proxy [OPTIONS]
+	Usage: groxy [OPTIONS]
 
 	The TCP proxy with discovery service support
 
@@ -29,33 +29,33 @@ A full implementation for a configurable Ambassador daemon ambd https://github.c
 			help             Shows a list of commands or help for one command
 
 Running with static candidates:
-	go-proxy --src :16379 --dst 10.0.3.144:6379
+	groxy --src :16379 --dst 10.0.3.144:6379
 
 Running with static candidates and round robin balance:
-	go-proxy --src :16379 --lb \
+	groxy --src :16379 --lb \
 		--dst 10.0.0.12:6379 --dst 10.0.1.123:6379
 
 Running with discovery backend:
-    go-proxy --dsc http://etcd0:2379 --dsc http://etcd1:2379 \
+    groxy --dsc http://etcd0:2379 --dsc http://etcd1:2379 \
         --src :16379 \
         --srv /srv/redis/debug
 
 Running in cluster mode:
-	go-proxy --src :16379 --src :16378 \
+	groxy --src :16379 --src :16378 \
 		--dst 10.0.0.12:6379 --dst 10.0.1.123:6379
 
 Add TLS encryption to your connection
-    go-proxy tls-client --src :16379 --dst 10.0.3.144:6379 \
+    groxy tls-client --src :16379 --dst 10.0.3.144:6379 \
         --tlscertpath s3://devops.example.org/client-cert
 
-    go-proxy tls-client --src :16379 --dst 10.0.3.144:6379 \
+    groxy tls-client --src :16379 --dst 10.0.3.144:6379 \
         --tlscertpath /path/to/client-cert
 
 Setting up TLS proxy server
-    go-proxy tls-server --src :6379 --dst 10.0.3.144:6379 \
+    groxy tls-server --src :6379 --dst 10.0.3.144:6379 \
         --tlscertpath s3://devops.example.org/server-cert
 
-    go-proxy tls-server --src :6379 --dst 10.0.3.144:6379 \
+    groxy tls-server --src :6379 --dst 10.0.3.144:6379 \
         --tlscertpath /path/to/server-cert
 
 */

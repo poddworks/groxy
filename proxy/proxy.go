@@ -2,8 +2,8 @@ package proxy
 
 import (
 	log "github.com/Sirupsen/logrus"
-	ctx "golang.org/x/net/context"
 
+	ctx "context"
 	"crypto/tls"
 	"errors"
 	"net"

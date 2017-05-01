@@ -1,10 +1,9 @@
 package proxy_test
 
 import (
-	"github.com/jeffjen/go-proxy/proxy"
+	"github.com/poddworks/groxy/proxy"
 
-	ctx "golang.org/x/net/context"
-
+	ctx "context"
 	"log"
 )
 
